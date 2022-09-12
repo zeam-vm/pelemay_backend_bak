@@ -1,6 +1,6 @@
 defmodule PelemayBackend do
   @moduledoc """
-  Documentation for `PelemayBackend`.
+  An integrated lightweight tensor backend for Nx.
   """
 
   @doc """

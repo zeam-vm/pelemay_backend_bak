@@ -1,6 +1,6 @@
 # PelemayBackend
 
-**TODO: Add description**
+An integrated lightweight tensor backend for Nx.
 
 ## Installation
 
