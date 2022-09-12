@@ -1,4 +1,4 @@
-<h1><img src="https://github.com/zeam-vm/pelemay_backend/raw/main/Pelemay.png" alt="Pelemay" width="45"> PelemayBackend</h1>
+# PelemayBackend
 
 An integrated lightweight tensor backend for Nx.
 
