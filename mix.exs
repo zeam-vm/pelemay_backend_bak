@@ -11,7 +11,11 @@ defmodule PelemayBackend.MixProject do
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      docs: docs()
+      docs: docs(),
+      compilers: [:pelemay_backend, :elixir_make] ++ Mix.compilers(),
+      aliases: [
+        "compile.pelemay_backend": &compile/1
+      ]
     ]
   end
 
@@ -29,7 +33,8 @@ defmodule PelemayBackend.MixProject do
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
       {:nx, "~> 0.3.0"},
-      {:ex_doc, "~> 0.28", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:elixir_make, "~> 0.6", runtime: false}
     ]
   end
 
@@ -87,4 +92,8 @@ defmodule PelemayBackend.MixProject do
   end
 
   defp before_closing_body_tag(_), do: ""
+
+  defp compile(_) do
+    {:ok, []}
+  end
 end
