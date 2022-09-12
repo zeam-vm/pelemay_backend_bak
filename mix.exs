@@ -5,7 +5,7 @@ defmodule PelemayBackend.MixProject do
     [
       app: :pelemay_backend,
       version: "0.1.0-dev",
-      elixir: "~> 1.14",
+      elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
