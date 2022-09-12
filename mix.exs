@@ -35,7 +35,7 @@ defmodule PelemayBackend.MixProject do
 
   defp docs do
     [
-      main: "PelemayBackend",
+      main: "README",
       logo: "Pelemay.png",
       before_closing_body_tag: &before_closing_body_tag/1,
       extras: [
