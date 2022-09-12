@@ -1,5 +1,5 @@
 defmodule PelemayBackend do
-  @moduledoc """
+  @moduledoc ~S"""
   An integrated lightweight tensor backend for Nx.
   """
   use Complex.Kernel
