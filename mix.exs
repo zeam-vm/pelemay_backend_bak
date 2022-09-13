@@ -95,7 +95,7 @@ defmodule PelemayBackend.MixProject do
   defp before_closing_body_tag(_), do: ""
 
   defp compile(_) do
-    System.put_env("TEST", "#{inspect OpenBLASBuilder.hello()}")
+    # System.put_env("TEST", "#{inspect OpenBLASBuilder.hello()}")
 
     {:ok, []}
   end
