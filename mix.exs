@@ -97,6 +97,11 @@ defmodule PelemayBackend.MixProject do
   defp compile(_) do
     # System.put_env("TEST", "#{inspect OpenBLASBuilder.hello()}")
 
+    OpenBLASBuilder.extract_archive!()
+
+    OpenBLASBuilder.compile_matched!(["cblas_sscal"])
+    |> IO.inspect()
+
     {:ok, []}
   end
 end
