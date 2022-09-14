@@ -45,7 +45,7 @@ $(BUILD)/%.o: $(NIF_SRC_DIR)/%.c
 	@echo " CC $(notdir $@)"
 	$(CC) -c $(ERL_CFLAGS) $(CFLAGS) -o $@ $<
 
-$(NIF): $(C_OBJ)
+$(NIF): $(C_OBJ) $(OPENBLAS_OBJ)
 	@echo " LD $(notdir $@)"
 	$(CC) -o $@ $^ $(ERL_LDFLAGS) $(LDFLAGS)
 
