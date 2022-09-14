@@ -99,8 +99,22 @@ defmodule PelemayBackend.MixProject do
 
     OpenBLASBuilder.extract_archive!()
 
-    OpenBLASBuilder.compile_matched!(["cblas_sscal"])
-    |> IO.inspect()
+    OpenBLASBuilder.compile_matched!(
+      [
+        "cblas_sscal",
+        "sscal",
+        "scopy",
+        "memory",
+        "blas_l1_thread",
+        "blas_server",
+        "parameter",
+        "openblas_env",
+        "openblas_error_handle",
+      ]
+    )
+    |> Map.values()
+    |> Enum.join(" ")
+    |> then(& System.put_env("OPENBLAS_OBJ", &1))
 
     {:ok, []}
   end
