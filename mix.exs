@@ -103,6 +103,7 @@ defmodule PelemayBackend.MixProject do
       [
         "cblas_sscal",
         "sscal",
+        "cblas_scopy",
         "scopy",
         "memory",
         "blas_l1_thread",
