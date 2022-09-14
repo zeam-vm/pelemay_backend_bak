@@ -111,6 +111,7 @@ defmodule PelemayBackend.MixProject do
         "parameter",
         "openblas_env",
         "openblas_error_handle",
+        "divtable"
       ]
     )
     |> Map.values()
