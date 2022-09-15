@@ -1,6 +1,3 @@
-#ifdef __linux__
-#include <linux/time.h>
-#endif
 #include <stdbool.h>
 #include <stdint.h>
 #include <erl_nif.h>
