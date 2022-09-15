@@ -11,7 +11,11 @@ defmodule PelemayBackend.MixProject do
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      docs: docs()
+      docs: docs(),
+      compilers: [:pelemay_backend, :elixir_make] ++ Mix.compilers(),
+      aliases: [
+        "compile.pelemay_backend": &compile/1
+      ]
     ]
   end
 
@@ -29,7 +33,9 @@ defmodule PelemayBackend.MixProject do
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
       {:nx, "~> 0.3.0"},
-      {:ex_doc, "~> 0.28", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:openblas_builder, "~> 0.1.0-dev", github: "zeam-vm/openblas_builder", branch: "main"},
+      {:elixir_make, "~> 0.6", runtime: false}
     ]
   end
 
@@ -87,4 +93,29 @@ defmodule PelemayBackend.MixProject do
   end
 
   defp before_closing_body_tag(_), do: ""
+
+  defp compile(_) do
+    # System.put_env("TEST", "#{inspect OpenBLASBuilder.hello()}")
+
+    OpenBLASBuilder.extract_archive!()
+
+    OpenBLASBuilder.compile_matched!([
+      {"interface", "cblas_sscal"},
+      {"interface", "sscal"},
+      {"interface", "cblas_scopy"},
+      {"interface", "scopy"},
+      {"driver/others", "memory"},
+      {"driver/others", "blas_l1_thread"},
+      {"driver/others", "blas_server"},
+      {"driver/others", "parameter"},
+      {"driver/others", "openblas_env"},
+      {"driver/others", "openblas_error_handle"},
+      {"driver/others", "divtable"}
+    ])
+    |> Map.values()
+    |> Enum.join(" ")
+    |> then(&System.put_env("OPENBLAS_OBJ", &1))
+
+    {:ok, []}
+  end
 end
