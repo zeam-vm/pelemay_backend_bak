@@ -3,6 +3,10 @@
 #include <erl_nif.h>
 #include <cblas.h>
 
+#ifndef CLOCK_MONOTONIC
+#define CLOCK_MONOTONIC 1
+#endif
+
 static ERL_NIF_TERM scopy_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     if(__builtin_expect(argc != 3, false)) {
