@@ -4,6 +4,8 @@ PRIV = $(MIX_APP_PATH)/priv
 BUILD = $(MIX_APP_PATH)/obj
 NIF = $(PRIV)/libnif.so
 
+LDFLAGS = -lpthread
+
 ifeq ($(CROSSCOMPILE),)
 ifeq ($(shell uname -s),Linux)
 LDFLAGS += -fPIC -shared
