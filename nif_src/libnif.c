@@ -1,9 +1,9 @@
-#include <stdbool.h>
-#include <stdint.h>
-#include <erl_nif.h>
 #ifdef __linux__
 #include <linux/time.h>
 #endif
+#include <stdbool.h>
+#include <stdint.h>
+#include <erl_nif.h>
 #include <cblas.h>
 
 static ERL_NIF_TERM scopy_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
