@@ -1,11 +1,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <erl_nif.h>
-#include <cblas.h>
 
 #ifndef CLOCK_MONOTONIC
 #define CLOCK_MONOTONIC 1
 #endif
+
+#include <cblas.h>
+
 
 static ERL_NIF_TERM scopy_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
