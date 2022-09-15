@@ -100,17 +100,17 @@ defmodule PelemayBackend.MixProject do
     OpenBLASBuilder.extract_archive!()
 
     OpenBLASBuilder.compile_matched!([
-      "cblas_sscal",
-      "sscal",
-      "cblas_scopy",
-      "scopy",
-      "memory",
-      "blas_l1_thread",
-      "blas_server",
-      "parameter",
-      "openblas_env",
-      "openblas_error_handle",
-      "divtable"
+      {"interface", "cblas_sscal"},
+      {"interface", "sscal"},
+      {"interface", "cblas_scopy"},
+      {"interface", "scopy"},
+      {"driver/others", "memory"},
+      {"driver/others", "blas_l1_thread"},
+      {"driver/others", "blas_server"},
+      {"driver/others", "parameter"},
+      {"driver/others", "openblas_env"},
+      {"driver/others", "openblas_error_handle"},
+      {"driver/others", "divtable"}
     ])
     |> Map.values()
     |> Enum.join(" ")
