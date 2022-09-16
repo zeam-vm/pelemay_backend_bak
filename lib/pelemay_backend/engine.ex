@@ -9,9 +9,9 @@ defmodule PelemayBackend.Engine do
   @doc """
   Executes code for the engine.
 
-  The code should be a list of tuples of an opcode and three operand.
+  The code should be a list of tuples of an opcode and an operand.
   """
-  @spec execute(list({opcode(), oprand(), oprand(), oprand()})) :: :ok | {:error, String.t()}
+  @spec execute(list({opcode(), oprand()})) :: :ok | {:error, String.t()}
   def execute(code) do
     PelemayBackend.NIF.execute_engine(code)
   end

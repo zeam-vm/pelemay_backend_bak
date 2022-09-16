@@ -18,7 +18,7 @@
 
 typedef struct code {
     ErlNifUInt64 opcode;
-    ERL_NIF_TERM operand[3];
+    ERL_NIF_TERM operand;
 } code_t;
 
 bool getcode(ErlNifEnv *env, ERL_NIF_TERM list, code_t **code, unsigned *length, ERL_NIF_TERM *exception)
@@ -44,9 +44,9 @@ bool getcode(ErlNifEnv *env, ERL_NIF_TERM list, code_t **code, unsigned *length,
         }
         int arity;
         const ERL_NIF_TERM *array;
-        if(__builtin_expect(!enif_get_tuple(env, head, &arity, &array) || arity != 4, false)) {
+        if(__builtin_expect(!enif_get_tuple(env, head, &arity, &array) || arity != 2, false)) {
             enif_free(*code);
-            *exception = enif_raise_exception(env, enif_make_string(env, "Should be list of tuple4", ERL_NIF_LATIN1));
+            *exception = enif_raise_exception(env, enif_make_string(env, "Should be list of tuple2", ERL_NIF_LATIN1));
             return false;
         }
         if(__builtin_expect(!enif_get_uint64(env, array[0], &code_p->opcode), false)) {
@@ -54,9 +54,7 @@ bool getcode(ErlNifEnv *env, ERL_NIF_TERM list, code_t **code, unsigned *length,
             *exception = enif_raise_exception(env, enif_make_string(env, "Invalid opcode", ERL_NIF_LATIN1));
             return false;
         }
-        code_p->operand[0] = array[1];
-        code_p->operand[1] = array[2];
-        code_p->operand[2] = array[3];
+        code_p->operand = array[1];
         code_p++;
         (*length)--;
     }
