@@ -8,7 +8,7 @@ defmodule PelemayBackend.Engine do
   @opcode_header "nif_src/opcode.h"
 
   @type opcode :: non_neg_integer()
-  @type oprand :: any()
+  @type operand :: any()
 
   @doc """
   Gets key of opcode.
@@ -246,7 +246,7 @@ defmodule PelemayBackend.Engine do
 
   The code should be a list of tuples of an opcode and an operand.
   """
-  @spec execute(list({opcode(), oprand()})) :: :ok | {:error, String.t()}
+  @spec execute(list({opcode(), operand()})) :: :ok | {:error, String.t()}
   def execute(code) do
     PelemayBackend.NIF.execute_engine(code)
   end
