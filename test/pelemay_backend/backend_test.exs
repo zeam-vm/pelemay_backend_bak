@@ -82,7 +82,7 @@ defmodule PelemayBackend.BackendTest do
     sigil_V: 2,
     take_diagonal: 2,
     template: 3,
-    tensor: 2,
+    # tensor: 2,
     cumulative_max: 2,
     cumulative_min: 2,
     cumulative_product: 2,
