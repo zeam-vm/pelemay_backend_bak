@@ -2,571 +2,281 @@ defmodule PelemayBackend.Backend do
   @moduledoc ~S"""
   An integrated lightweight tensor backend for Nx.
   """
-
-  use Complex.Kernel
+  require Logger
 
   @behaviour Nx.Backend
+  # @enforce_keys [:state]
 
   @doc false
   defstruct [:state]
 
   alias Nx.Tensor, as: T
-  alias Nx.BinaryBackend, as: B
+  alias PelemayBackend.Backend, as: B
 
   import Nx.Shared
-  import Bitwise, only: [>>>: 2, &&&: 2]
 
   @impl true
-  defdelegate constant(out, constant, backend_options), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate random_uniform(out, min, max, backend_options), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate random_normal(out, mu, sigma, backend_options), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate iota(out, axis, backend_options), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate eye(out, backend_options), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate from_binary(t, binary, backend_options), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate to_binary(t, limit), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate backend_copy(tensor, backend, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate backend_transfer(tensor, backend, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate backend_deallocate(tensor), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate to_batched(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate reshape(out, tensor), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate squeeze(out, tensor, axes), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate broadcast(out, t, shape, axes), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate transpose(out, t, axes), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate pad(out, t, pad_value, padding_config), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate reverse(out, t, axes), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate dot(out, left, contract_axes1, batch_axes2, right, contract_axes2, batch_axes2),
-    to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate select(out, pred, on_true, on_false), to: Nx.BinaryBackend
-
-  ## Element wise bin ops
-
-  for fun <-
-        [:add, :subtract, :multiply, :power, :remainder, :divide, :atan2, :min, :max, :quotient] ++
-          [:bitwise_and, :bitwise_or, :bitwise_xor, :left_shift, :right_shift] ++
-          [:equal, :not_equal, :greater, :less, :greater_equal, :less_equal] ++
-          [:logical_and, :logical_or, :logical_xor] do
-    capture = Macro.var(:"element_#{fun}", __MODULE__)
-
-    @impl true
-    def unquote(fun)(out, left, right) do
-      element_wise_bin_op(out, left, right, &(unquote(capture) / 3))
-    end
-  end
-
-  defp element_wise_bin_op(%{type: type} = out, %{shape: {}} = left, right, fun) do
-    number = scalar_to_number(left)
-
-    data =
-      binary_to_binary(to_binary(right), right.type, type, fn x ->
-        fun.(type, number, x)
-      end)
-
-    from_binary(out, data)
-  end
-
-  defp element_wise_bin_op(%{type: type} = out, left, %{shape: {}} = right, fun) do
-    number = scalar_to_number(right)
-
-    data =
-      binary_to_binary(to_binary(left), left.type, type, fn x ->
-        fun.(type, x, number)
-      end)
-
-    from_binary(out, data)
-  end
-
-  defp element_wise_bin_op(%{shape: shape, type: type} = out, left, right, fun) do
-    %T{type: {_, left_size} = left_type} = left
-    %T{type: {_, right_size} = right_type} = right
-
-    count = Nx.size(shape)
-    left_data = broadcast_data(left, shape)
-    right_data = broadcast_data(right, shape)
-
-    data =
-      match_types [left_type, right_type, type] do
-        for i <- 0..(count - 1), into: <<>> do
-          left_consumed = i * left_size
-          <<_::size(left_consumed)-bitstring, match!(x, 0), _::bitstring>> = left_data
-          x = read!(x, 0)
-
-          right_consumed = i * right_size
-          <<_::size(right_consumed)-bitstring, match!(y, 1), _::bitstring>> = right_data
-          y = read!(y, 1)
-
-          <<write!(fun.(type, x, y), 2)>>
-        end
-      end
-
-    from_binary(out, data)
-  end
-
-  defp element_add(_, a, b), do: Complex.add(a, b)
-  defp element_subtract(_, a, b), do: Complex.subtract(a, b)
-  defp element_multiply(_, a, b), do: Complex.multiply(a, b)
-  defp element_divide(_, a, b), do: Complex.divide(a, b)
-  defp element_quotient(_, a, b), do: div(a, b)
-
-  defp element_remainder(_, a, b) when is_integer(a) and is_integer(b), do: rem(a, b)
-  defp element_remainder(_, a, b), do: :math.fmod(a, b)
-
-  defp element_atan2(_, a, b), do: Complex.atan2(a, b)
-
-  defp element_max(_, :nan, _), do: :nan
-  defp element_max(_, _, :nan), do: :nan
-  defp element_max(_, :infinity, _), do: :infinity
-  defp element_max(_, _, :infinity), do: :infinity
-  defp element_max(_, :neg_infinity, x), do: x
-  defp element_max(_, x, :neg_infinity), do: x
-  defp element_max(_, a, b) when is_number(a) and is_number(b), do: max(a, b)
-
-  defp element_min(_, :nan, _), do: :nan
-  defp element_min(_, _, :nan), do: :nan
-  defp element_min(_, :infinity, x), do: x
-  defp element_min(_, x, :infinity), do: x
-  defp element_min(_, :neg_infinity, _), do: :neg_infinity
-  defp element_min(_, _, :neg_infinity), do: :neg_infinity
-  defp element_min(_, a, b) when is_number(a) and is_number(b), do: min(a, b)
-
-  defp element_power({type, _}, a, b) when type in [:s, :u], do: Integer.pow(a, b)
-  defp element_power(_, a, b), do: Complex.power(a, b)
-
-  defp element_bitwise_and(_, a, b), do: :erlang.band(a, b)
-  defp element_bitwise_or(_, a, b), do: :erlang.bor(a, b)
-  defp element_bitwise_xor(_, a, b), do: :erlang.bxor(a, b)
-
-  defp element_left_shift(_, a, b) when is_number(b) and b >= 0,
-    do: :erlang.bsl(a, b)
-
-  defp element_left_shift(_, _, b), do: raise(ArgumentError, "cannot left shift by #{b}")
-
-  defp element_right_shift(_, a, b) when is_number(b) and b >= 0,
-    do: :erlang.bsr(a, b)
-
-  defp element_right_shift(_, _, b), do: raise(ArgumentError, "cannot right shift by #{b}")
-
-  defp element_equal(_, :nan, _), do: 0
-  defp element_equal(_, _, :nan), do: 0
-  defp element_equal(_, a, b), do: boolean_as_number(a == b)
-
-  defp element_not_equal(_, :nan, _), do: 1
-  defp element_not_equal(_, _, :nan), do: 1
-  defp element_not_equal(_, a, b), do: boolean_as_number(a != b)
-
-  defp element_logical_and(_, a, b), do: boolean_as_number(as_boolean(a) and as_boolean(b))
-  defp element_logical_or(_, a, b), do: boolean_as_number(as_boolean(a) or as_boolean(b))
-  defp element_logical_xor(_, a, b), do: boolean_as_number(as_boolean(a) != as_boolean(b))
-
-  defp element_greater(_, :nan, _), do: 0
-  defp element_greater(_, _, :nan), do: 0
-  defp element_greater(_, x, x), do: 0
-  defp element_greater(_, :infinity, _), do: 1
-  defp element_greater(_, _, :neg_infinity), do: 1
-  defp element_greater(_, :neg_infinity, _), do: 0
-  defp element_greater(_, _, :infinity), do: 0
-  defp element_greater(_, a, b), do: boolean_as_number(a > b)
-
-  defp element_less(_, :nan, _), do: 0
-  defp element_less(_, _, :nan), do: 0
-  defp element_less(_, :infinity, _), do: 0
-  defp element_less(_, _, :neg_infinity), do: 0
-  defp element_less(_, x, x), do: 0
-  defp element_less(_, _, :infinity), do: 1
-  defp element_less(_, :neg_infinity, _), do: 1
-  defp element_less(_, a, b), do: boolean_as_number(a < b)
-
-  defp element_greater_equal(_, :nan, _), do: 0
-  defp element_greater_equal(_, _, :nan), do: 0
-  defp element_greater_equal(_, x, x), do: 1
-  defp element_greater_equal(_, :neg_infinity, _), do: 0
-  defp element_greater_equal(_, _, :infinity), do: 0
-  defp element_greater_equal(_, :infinity, _), do: 1
-  defp element_greater_equal(_, _, :neg_infinity), do: 1
-  defp element_greater_equal(_, a, b), do: boolean_as_number(a >= b)
-
-  defp element_less_equal(_, :nan, _), do: 0
-  defp element_less_equal(_, _, :nan), do: 0
-  defp element_less_equal(_, _, :infinity), do: 1
-  defp element_less_equal(_, :neg_infinity, _), do: 1
-  defp element_less_equal(_, x, x), do: 1
-  defp element_less_equal(_, :infinity, _), do: 0
-  defp element_less_equal(_, _, :neg_infinity), do: 0
-  defp element_less_equal(_, a, b), do: boolean_as_number(a <= b)
-
-  defp as_boolean(n) when n == 0, do: false
-  defp as_boolean(%Complex{re: re, im: im}) when re == 0 and im == 0, do: false
-  defp as_boolean(_), do: true
-
-  defp boolean_as_number(true), do: 1
-  defp boolean_as_number(false), do: 0
-
-  ## Element wise unary ops
-
-  for {name, {_desc, code, _formula}} <- Nx.Shared.unary_math_funs() do
-    @impl true
-    def unquote(name)(out, tensor) do
-      element_wise_unary_op(out, tensor, fn x -> unquote(code) end)
-    end
-  end
-
-  @impl true
-  def count_leading_zeros(out, %{type: {_, size}} = tensor) do
-    element_wise_bit_op(out, tensor, &element_clz(&1, size))
-  end
-
-  @impl true
-  def population_count(out, tensor) do
-    element_wise_bit_op(out, tensor, &element_popcount(&1, 0))
-  end
-
-  defp element_wise_bit_op(out, %{type: {_, size}} = tensor, fun) do
-    data =
-      match_types [out.type] do
-        for <<seg::unsigned-size(size)-native <- to_binary(tensor)>>, into: <<>> do
-          <<write!(fun.(seg), 0)>>
-        end
-      end
-
+  def constant(%{type: type, shape: shape} = out, constant, _backend_options) do
+    data = :binary.copy(number_to_binary(constant, type), Nx.size(shape))
     from_binary(out, data)
   end
 
   @impl true
-  def abs(out, tensor), do: element_wise_unary_op(out, tensor, &Complex.abs/1)
-
-  @impl true
-  def conjugate(out, tensor), do: element_wise_unary_op(out, tensor, &Complex.conjugate/1)
-
-  @impl true
-  defdelegate real(out, tensor),
-    to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate imag(out, tensor),
-    to: Nx.BinaryBackend
-
-  @impl true
-  def bitwise_not(out, tensor), do: element_wise_unary_op(out, tensor, &:erlang.bnot/1)
-
-  @impl true
-  defdelegate is_nan(out, tensor), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate is_infinity(out, tensor), to: Nx.BinaryBackend
-
-  @impl true
-  def ceil(out, tensor), do: element_wise_unary_op(out, tensor, &:erlang.ceil/1)
-
-  @impl true
-  def floor(out, tensor), do: element_wise_unary_op(out, tensor, &:erlang.floor/1)
-  @impl true
-  def negate(out, tensor), do: element_wise_unary_op(out, tensor, &Complex.negate/1)
-
-  @impl true
-  def round(out, tensor), do: element_wise_unary_op(out, tensor, &:erlang.round/1)
-
-  @impl true
-  def sign(out, tensor), do: element_wise_unary_op(out, tensor, &element_sign/1)
-
-  defp element_sign(n) when n < 0, do: -1
-  defp element_sign(n) when n > 0, do: 1
-  defp element_sign(n), do: n
-
-  # https://en.wikipedia.org/wiki/Hamming_weight
-  # There are algorithms with faster worst case but they are size specific.
-  # The implementation below is also the most efficient for low counts. Given
-  # our integers are always 64 bits internally, we will have a lot of zeros
-  # internally, so this should be the fastest.
-  defp element_popcount(0, count), do: count
-  defp element_popcount(n, count), do: element_popcount(n &&& n - 1, count + 1)
-
-  defp element_wise_unary_op(out, tensor, fun) do
-    data = binary_to_binary(to_binary(tensor), tensor.type, out.type, fun)
-    from_binary(out, data)
-  end
-
-  defp element_clz(0, size), do: size
-  defp element_clz(n, 64), do: element_clz64(n)
-  defp element_clz(n, 32), do: element_clz32(n)
-  defp element_clz(n, 16), do: element_clz16(n)
-  defp element_clz(n, 8), do: element_clz8(n)
-
-  defp element_clz64(num) do
-    case num &&& 0xFFFFFFFF00000000 do
-      0 -> 32 + element_clz32(num)
-      _ -> element_clz32(num >>> 32)
-    end
-  end
-
-  defp element_clz32(num) do
-    case num &&& 0xFFFF0000 do
-      0 -> 16 + element_clz16(num)
-      _ -> element_clz16(num >>> 16)
-    end
-  end
-
-  defp element_clz16(num) do
-    case num &&& 0xFF00 do
-      0 -> 8 + element_clz8(num)
-      _ -> element_clz8(num >>> 8)
-    end
-  end
-
-  defp element_clz8(num) do
-    case num &&& 0xF0 do
-      0 -> 4 + element_clz4(num)
-      _ -> element_clz4(num >>> 4)
-    end
-  end
-
-  defp element_clz4(num) do
-    case num &&& 0xC do
-      0 -> 2 + element_clz2(num)
-      _ -> element_clz2(num >>> 2)
-    end
-  end
-
-  defp element_clz2(0), do: 2
-  defp element_clz2(1), do: 1
-  defp element_clz2(_), do: 0
-
-  @impl true
-  defdelegate inspect(tensor, inspect_opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate conv(out, t, k, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate cholesky(out, tensor), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate qr(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate eigh(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate svd(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate lu(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate triangular_solve(out, a, b, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate all(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate any(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate sum(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate product(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate reduce_max(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate reduce_min(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate argmin(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate argmax(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate reduce(out, tensor, acc, opts, fun), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate window_reduce(out, tensor, acc, window_dimensions, opts, fun), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate window_sum(out, tensor, window_dimensions, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate window_max(out, tensor, window_dimensions, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate window_min(out, tensor, window_dimensions, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate window_product(out, tensor, window_dimensions, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate map(out, tensor, opts, fun), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate window_scatter_max(out, tensor, source, init_value, window_dimensions, opts),
-    to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate window_scatter_min(out, tensor, source, init_value, window_dimensions, opts),
-    to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate indexed_add(out, target, indices, updates), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate indexed_put(out, target, indices, updates), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate clip(out, tensor, min, max), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate slice(out, tensor, start_indices, lengths, strides), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate put_slice(
-                out,
-                tensor,
-                start_indices,
-                slice,
-                combine_fn \\ fn _prev, new -> new end
-              ),
-              to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate take(out, tensor, indices, axis), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate take_along_axis(output, tensor, indices, axis), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate gather(out, tensor, indices), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate concatenate(out, tensors, axis), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate as_type(out, tensor), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate bitcast(out, tensor), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate sort(output, t, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate argsort(output, t, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate fft(out, tensor, opts), to: Nx.BinaryBackend
-
-  @impl true
-  defdelegate ifft(out, tensor, opts), to: Nx.BinaryBackend
-
-  ## Conversion helpers
-
-  defp scalar_to_number(n) when is_number(n), do: n
-  defp scalar_to_number(%Complex{} = n), do: n
-  defp scalar_to_number(t), do: binary_to_number(to_binary(t), t.type)
-
-  defp binary_to_number(bin, type) do
-    match_types [type] do
-      <<match!(value, 0)>> = bin
-      read!(value, 0)
-    end
-  end
-
-  defp binary_to_binary(binary, in_type, out_type, fun) do
-    match_types [in_type, out_type] do
-      for <<match!(seg, 0) <- binary>>, into: <<>> do
-        <<write!(fun.(read!(seg, 0)), 1)>>
-      end
-    end
-  end
+  def from_binary(t, binary, _backend_options), do: from_binary(t, binary)
 
   defp from_binary(t, binary) when is_binary(binary), do: %{t | data: %B{state: binary}}
   defp from_binary(t, other), do: %{t | data: %B{state: IO.iodata_to_binary(other)}}
 
+  @impl true
+  def backend_copy(tensor, backend, opts) do
+    backend_transfer(tensor, backend, opts)
+  end
+
+  @impl true
+  def backend_transfer(tensor, Nx.Tensor, _opts) do
+    tensor
+  end
+
+  def backend_transfer(tensor, Nx.BinaryBackend, _opts) do
+    tensor
+  end
+
+  def backend_transfer(tensor, PelemayBackend.Backend, _opts) do
+    tensor
+  end
+
+  def backend_transfer(tensor, backend, opts) do
+    backend.from_binary(tensor, to_binary(tensor), opts)
+  end
+
+  @impl true
+  def backend_deallocate(_tensor) do
+    :ok
+  end
+
+  @impl true
+  def to_batched(out, tensor, opts) do
+    leftover = opts[:leftover]
+
+    batch_size = elem(out.shape, 0)
+    axis_size = elem(tensor.shape, 0)
+
+    remainder = rem(axis_size, batch_size)
+    num_full_batches = div(axis_size, batch_size)
+
+    range =
+      if remainder != 0 and leftover == :repeat do
+        0..num_full_batches
+      else
+        0..(num_full_batches - 1)
+      end
+
+    Stream.map(range, fn
+      ^num_full_batches ->
+        expr_fun = fn tensor ->
+          Nx.concatenate([
+            Nx.slice_along_axis(tensor, num_full_batches * batch_size, remainder),
+            Nx.slice_along_axis(tensor, 0, batch_size - remainder)
+          ])
+        end
+
+        jit(expr_fun, [tensor])
+
+      i ->
+        expr_fun = fn tensor, start_idx ->
+          Nx.slice_along_axis(tensor, start_idx, batch_size)
+        end
+
+        start_idx = i * batch_size
+        jit(expr_fun, [tensor, start_idx])
+    end)
+  end
+
+  @impl true
+  def to_binary(%{type: {_backend_options, size}} = t, limit) do
+    limit = limit * div(size, 8)
+    binary = to_binary(t)
+
+    if byte_size(binary) == limit do
+      binary
+    else
+      binary_part(binary, 0, limit)
+    end
+  end
+
   defp to_binary(%T{data: %{state: data}}), do: data
 
-  defp broadcast_data(%{shape: shape} = t, shape),
-    do: to_binary(t)
+  @impl true
+  def inspect(%T{} = tensor, inspect_opts) do
+    limit = if inspect_opts.limit == :infinity, do: :infinity, else: inspect_opts.limit + 1
 
-  defp broadcast_data(t, shape),
-    do: broadcast_data(t, shape, Nx.Shape.broadcast_axes(t.shape, shape))
-
-  defp broadcast_data(%T{shape: {}} = t, shape, []) do
-    t
-    |> to_binary()
-    |> :binary.copy(Nx.size(shape))
+    tensor
+    |> to_binary(min(limit, Nx.size(tensor)))
+    |> then(&Nx.Backend.inspect(tensor, &1, inspect_opts))
+    |> maybe_add_signature(tensor)
   end
 
-  defp broadcast_data(%T{shape: old_shape, type: {_, size}} = t, new_shape, axes) do
-    chunk_size = size * Nx.size(old_shape)
-
-    new_shape
-    |> Tuple.to_list()
-    |> unary_broadcast(0, old_shape, 0, axes, to_binary(t), chunk_size)
-    |> IO.iodata_to_binary()
+  defp maybe_add_signature(result, _tensor) do
+    result
   end
 
-  # Old and new match
-  defp unary_broadcast([dim | dims], axis, old_shape, old_pos, [axis | axes], data, chunk_size)
-       when elem(old_shape, old_pos) == dim do
-    chunk_size = div(chunk_size, dim)
+  ## JIT callbacks
 
-    for <<chunk::size(chunk_size)-bitstring <- data>> do
-      unary_broadcast(dims, axis + 1, old_shape, old_pos + 1, axes, chunk, chunk_size)
+  @impl true
+  def concatenate(out, tensors, axis) do
+    out = Nx.to_template(out)
+
+    expr_fun = fn tensors ->
+      Nx.Defn.Expr.concatenate(out, Tuple.to_list(tensors), axis)
+    end
+
+    jit(expr_fun, [List.to_tuple(tensors)])
+  end
+
+  @impl true
+  def slice(out, tensor, start_indices, lengths, strides) do
+    out = Nx.to_template(out)
+
+    if Enum.all?(start_indices, &is_integer/1) do
+      expr_fun = fn tensor ->
+        Nx.Defn.Expr.slice(out, tensor, start_indices, lengths, strides)
+      end
+
+      jit(expr_fun, [tensor])
+    else
+      expr_fun = fn tensor, start_indices ->
+        Nx.Defn.Expr.slice(out, tensor, Tuple.to_list(start_indices), lengths, strides)
+      end
+
+      jit(expr_fun, [tensor, List.to_tuple(start_indices)])
     end
   end
 
-  # Implicit broadcasting
-  defp unary_broadcast([dim | dims], axis, old_shape, old_pos, [axis | axes], data, chunk_size)
-       when elem(old_shape, old_pos) == 1 do
-    for _ <- 1..dim do
-      unary_broadcast(dims, axis + 1, old_shape, old_pos + 1, axes, data, chunk_size)
+  @impl true
+  def put_slice(out, tensor, start_indices, slice) do
+    out = Nx.to_template(out)
+
+    if Enum.all?(start_indices, &is_integer/1) do
+      expr_fun = fn tensor, slice ->
+        Nx.Defn.Expr.put_slice(out, tensor, start_indices, slice)
+      end
+
+      jit(expr_fun, [tensor, slice])
+    else
+      expr_fun = fn tensor, start_indices, slice ->
+        Nx.Defn.Expr.put_slice(out, tensor, Tuple.to_list(start_indices), slice)
+      end
+
+      jit(expr_fun, [tensor, List.to_tuple(start_indices), slice])
     end
   end
 
-  # Explicit broadcasting (unmapped axes)
-  defp unary_broadcast([dim | dims], axis, old_shape, old_pos, axes, data, chunk_size) do
-    for _ <- 1..dim do
-      unary_broadcast(dims, axis + 1, old_shape, old_pos, axes, data, chunk_size)
+  @impl true
+  def optional(_name, args, fun) do
+    # Here we take the leading tensor arguments and pass them as JIT arguments
+    {tensors, rest} = Enum.split_while(args, &is_struct(&1, Nx.Tensor))
+
+    wrapper_fun = fn tensors ->
+      tensors = Tuple.to_list(tensors)
+      apply(fun, tensors ++ rest)
+    end
+
+    jit(wrapper_fun, [List.to_tuple(tensors)])
+  end
+
+  binary_ops =
+    [:add, :subtract, :multiply, :power, :remainder, :divide, :atan2, :min, :max, :quotient] ++
+      [:bitwise_and, :bitwise_or, :bitwise_xor, :left_shift, :right_shift] ++
+      [:equal, :not_equal, :greater, :less, :greater_equal, :less_equal] ++
+      [:logical_and, :logical_or, :logical_xor]
+
+  unary_ops =
+    [:exp, :expm1, :log, :log1p, :sigmoid, :cos, :sin, :tan] ++
+      [:cosh, :sinh, :tanh, :acos, :asin, :atan, :acosh, :asinh, :atanh] ++
+      [:sqrt, :rsqrt, :cbrt, :is_nan, :is_infinity, :erf, :erfc, :erf_inv] ++
+      [:abs, :bitwise_not, :ceil, :conjugate, :floor, :negate, :round, :sign] ++
+      [:count_leading_zeros, :population_count, :real, :imag]
+
+  callbacks =
+    [
+      {:eye, [:backend_options], []},
+      {:iota, [:axis, :backend_options], []},
+      {:random_uniform, [:min, :max, :backend_options], [:min, :max]},
+      {:random_normal, [:mu, :sigma, :backend_options], [:mu, :sigma]},
+      {:as_type, [:tensor], [:tensor]},
+      {:bitcast, [:tensor], [:tensor]},
+      {:reshape, [:tensor], [:tensor]},
+      {:squeeze, [:tensor, :axes], [:tensor]},
+      {:broadcast, [:tensor, :shape, :axes], [:tensor]},
+      {:transpose, [:tensor, :axes], [:tensor]},
+      {:pad, [:tensor, :pad_value, :padding_config], [:tensor, :pad_value]},
+      {:reverse, [:tensor, :axes], [:tensor]},
+      {:dot, [:left, :c1, :b1, :right, :c2, :b2], [:left, :right]},
+      {:clip, [:tensor, :min, :max], [:tensor, :min, :max]},
+      {:take, [:tensor, :indices, :axis], [:tensor, :indices]},
+      {:take_along_axis, [:tensor, :indices, :axis], [:tensor, :indices]},
+      {:gather, [:input, :indices], [:input, :indices]},
+      {:select, [:pred, :on_true, :on_false], [:pred, :on_true, :on_false]},
+      {:conv, [:tensor, :kernel, :opts], [:tensor, :kernel]},
+      {:all, [:tensor, :opts], [:tensor]},
+      {:any, [:tensor, :opts], [:tensor]},
+      {:sum, [:tensor, :opts], [:tensor]},
+      {:product, [:tensor, :opts], [:tensor]},
+      {:reduce_max, [:tensor, :opts], [:tensor]},
+      {:reduce_min, [:tensor, :opts], [:tensor]},
+      {:argmax, [:tensor, :opts], [:tensor]},
+      {:argmin, [:tensor, :opts], [:tensor]},
+      {:reduce, [:tensor, :acc, :opts, :fun], [:tensor, :acc]},
+      {:window_reduce, [:tensor, :acc, :shape, :opts, :fun], [:tensor, :acc]},
+      {:window_sum, [:tensor, :shape, :opts], [:tensor]},
+      {:window_product, [:tensor, :shape, :opts], [:tensor]},
+      {:window_max, [:tensor, :shape, :opts], [:tensor]},
+      {:window_min, [:tensor, :shape, :opts], [:tensor]},
+      {:map, [:tensor, :opts, :fun], [:tensor]},
+      {:sort, [:tensor, :opts], [:tensor]},
+      {:argsort, [:tensor, :opts], [:tensor]},
+      {:window_scatter_max, [:tensor, :source, :init_value, :window_dims, :opts],
+       [:tensor, :source, :init_value]},
+      {:window_scatter_min, [:tensor, :source, :init_value, :window_dims, :opts],
+       [:tensor, :source, :init_value]},
+      {:indexed_add, [:tensor, :indices, :updates], [:tensor, :indices, :updates]},
+      {:indexed_put, [:tensor, :indices, :updates], [:tensor, :indices, :updates]},
+      {:cholesky, [:tensor], [:tensor]},
+      {:lu, [:tensor, :opts], [:tensor]},
+      {:qr, [:tensor, :opts], [:tensor]},
+      {:triangular_solve, [:a, :b, :opts], [:a, :b]},
+      {:eigh, [:tensor, :opts], [:tensor]},
+      {:svd, [:tensor, :opts], [:tensor]},
+      {:fft, [:tensor, :opts], [:tensor]},
+      {:ifft, [:tensor, :opts], [:tensor]}
+    ] ++
+      for(op <- binary_ops, do: {op, [:left, :right], [:left, :right]}) ++
+      for(op <- unary_ops, do: {op, [:tensor], [:tensor]})
+
+  for {name, args, tensor_args} <- callbacks do
+    args = Enum.map(args, &Macro.var(&1, __MODULE__))
+    tensor_args = Enum.map(tensor_args, &Macro.var(&1, __MODULE__))
+
+    @impl true
+    def unquote(name)(out, unquote_splicing(args)) do
+      out = Nx.to_template(out)
+
+      expr_fun = fn unquote_splicing(tensor_args) ->
+        Nx.Defn.Expr.unquote(name)(out, unquote_splicing(args))
+      end
+
+      jit(expr_fun, [unquote_splicing(tensor_args)])
     end
   end
 
-  defp unary_broadcast([], _axis, _old_shape, _old_pos, [], data, _chunk_size) do
-    data
+  defp jit(fun, args) do
+    Logger.debug("fun: #{inspect fun}")
+    Logger.debug("args: #{inspect args}")
+    # Nx.Defn.jit_apply(fun, args, )
   end
+
+  ## Conversion helpers
+
+  defp number_to_binary(number, type),
+    do: match_types([type], do: <<write!(number, 0)>>)
 end
