@@ -163,7 +163,7 @@ defmodule PelemayBackend.Engine do
   end
 
   @doc """
-  Gets c code of `enum instruction`.`
+  Gets c code of `enum instruction`.
   """
   def c_enum_instruction() do
     instruction_code()
