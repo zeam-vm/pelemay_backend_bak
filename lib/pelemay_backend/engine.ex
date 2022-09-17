@@ -3,6 +3,7 @@ defmodule PelemayBackend.Engine do
   Document for `PelemayBackend.Engine`.
   """
   import Bitwise
+  require Logger
 
   @opcode_macro "PELEMAY_ENGINE_OPCODE_H"
   @opcode_header "nif_src/opcode.h"
@@ -249,5 +250,97 @@ defmodule PelemayBackend.Engine do
   @spec execute(list({opcode(), operand()})) :: :ok | {:error, String.t()}
   def execute(code) do
     PelemayBackend.NIF.execute_engine(code)
+  end
+
+  @doc """
+  Gets Regex of instructions.
+  """
+  def regex_inst() do
+    instruction_code()
+    |> Map.keys()
+    |> Enum.map(&Atom.to_string/1)
+    |> Enum.map(&"(^ *#{&1} +(?<#{&1}>.*)$)")
+    |> Enum.join("|")
+    |> Regex.compile!()
+  end
+
+  @doc """
+  Assemble code into
+  """
+  @spec assemble(String.t(), Code.binding()) :: list({opcode(), operand()})
+  def assemble(code, binding \\ []) do
+    r = regex_inst()
+
+    String.split(code, "\n")
+    |> Stream.reject(& &1 == "")
+    |> Stream.map(&Regex.named_captures(r, &1))
+    |> Stream.map(&Map.reject(&1, fn {_k, v} -> v == "" end))
+    |> Enum.reduce({[], binding}, fn map, {acc, binding} ->
+      inst = Map.keys(map) |> hd()
+      {args, binding} = Map.get(map, inst, "") |> Code.eval_string(binding)
+      inst = String.to_atom(inst)
+      {acc ++ [{inst, args, binding}], binding}
+    end)
+    |> elem(0)
+    |> Stream.map(fn {inst, args, binding} ->
+      encode(inst, args, binding)
+    end)
+    |> Enum.to_list()
+  end
+
+  defp encode(:scal, _args, _binding) do
+    Logger.debug("scal")
+  end
+
+  defp encode(:sscal, _args, _binding) do
+    Logger.debug("sscal")
+  end
+
+  defp encode(:copy, _args, _binding) do
+    Logger.debug("scal")
+  end
+
+  defp encode(:dot, _args, _binding) do
+    Logger.debug("dot")
+  end
+
+  defp encode(:axpy, _args, _binding) do
+    Logger.debug("axpy")
+  end
+
+  defp encode(:gemv, _args, _binding) do
+    Logger.debug("gemv")
+  end
+
+  defp encode(:gemm, _args, _binding) do
+    Logger.debug("gemm")
+  end
+
+  defp encode(:lds, _args, _binding) do
+    Logger.debug("lds")
+  end
+
+  defp encode(:ldb, _args, _binding) do
+    Logger.debug("ldb")
+  end
+
+  defp encode(:ldt2, _args, _binding) do
+    Logger.debug("ldt2")
+  end
+
+  defp encode(:ldt3, _args, _binding) do
+    Logger.debug("ldt3")
+  end
+
+  defp encode(:release, _args, _binding) do
+    Logger.debug("release")
+  end
+
+  defp encode(:alloc, _args, _binding) do
+    Logger.debug("alloc")
+  end
+
+  defp encode(:send, _args, _binding) do
+    Logger.debug("send")
   end
 end
