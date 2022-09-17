@@ -58,6 +58,7 @@ enum instruction {
     INST_LDT3 = 0x83,
     INST_RELEASE = 0x84,
     INST_ALLOC = 0x85,
+    INST_SEND = 0x86,
 };
 
 
@@ -70,6 +71,7 @@ enum register_type {
   type_binary,
   type_tuple2,
   type_tuple3,
+  type_pid,
 };
 
 enum type_binary {

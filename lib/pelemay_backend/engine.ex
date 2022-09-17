@@ -49,7 +49,8 @@ defmodule PelemayBackend.Engine do
       ldt2: 0x82,
       ldt3: 0x83,
       release: 0x84,
-      alloc: 0x85
+      alloc: 0x85,
+      send: 0x86,
     }
   end
 
@@ -205,6 +206,7 @@ defmodule PelemayBackend.Engine do
       type_binary,
       type_tuple2,
       type_tuple3,
+      type_pid,
     };
 
     enum type_binary {
