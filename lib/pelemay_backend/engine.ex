@@ -51,7 +51,7 @@ defmodule PelemayBackend.Engine do
       ldt3: 0x83,
       release: 0x84,
       alloc: 0x85,
-      send: 0x86,
+      send: 0x86
     }
   end
 
@@ -74,23 +74,22 @@ defmodule PelemayBackend.Engine do
     rs6 = Keyword.get(keyword, :rs6, 0)
     rs7 = Keyword.get(keyword, :rs7, 0)
 
-    <<opcode::size(64)>> =
-      <<
-        rs7::5,
-        rs6::5,
-        rs5::5,
-        rs4::5,
-        rs3::5,
-        rs2::5,
-        rs1::5,
-        rd::5,
-        reserved::8,
-        used_registers::3,
-        type_binary::3,
-        bit_type_binary::2,
-        is_use_operand::1,
-        instruction::7
-      >>
+    <<opcode::size(64)>> = <<
+      rs7::5,
+      rs6::5,
+      rs5::5,
+      rs4::5,
+      rs3::5,
+      rs2::5,
+      rs1::5,
+      rd::5,
+      reserved::8,
+      used_registers::3,
+      type_binary::3,
+      bit_type_binary::2,
+      is_use_operand::1,
+      instruction::7
+    >>
 
     opcode
   end
@@ -99,7 +98,7 @@ defmodule PelemayBackend.Engine do
   Gets the mask of opcode.
   """
   def mask(key) do
-    opcode(Keyword.put([], key, 0xffffffffffffffff))
+    opcode(Keyword.put([], key, 0xFFFFFFFFFFFFFFFF))
   end
 
   @doc """
@@ -173,12 +172,12 @@ defmodule PelemayBackend.Engine do
       "    #{name_macro(inst, :inst)} = 0x#{Integer.to_string(code, 16)},"
     end)
     |> Enum.join("\n")
-    |> then(&
-    """
-    enum instruction {
-    #{&1}
-    };
-    """
+    |> then(
+      &"""
+      enum instruction {
+      #{&1}
+      };
+      """
     )
   end
 
@@ -272,7 +271,7 @@ defmodule PelemayBackend.Engine do
     r = regex_inst()
 
     String.split(code, "\n")
-    |> Stream.reject(& &1 == "")
+    |> Stream.reject(&(&1 == ""))
     |> Stream.map(&Regex.named_captures(r, &1))
     |> Stream.map(&Map.reject(&1, fn {_k, v} -> v == "" end))
     |> Enum.reduce({[], binding}, fn map, {acc, binding} ->

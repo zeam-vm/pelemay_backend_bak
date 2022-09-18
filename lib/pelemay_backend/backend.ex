@@ -270,8 +270,8 @@ defmodule PelemayBackend.Backend do
   end
 
   defp jit(fun, args) do
-    Logger.debug("fun: #{inspect fun}")
-    Logger.debug("args: #{inspect args}")
+    Logger.debug("fun: #{inspect(fun)}")
+    Logger.debug("args: #{inspect(args)}")
     PelemayBackend.jit_apply(fun, args, on_conflict: :force)
   end
 
