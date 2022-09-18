@@ -17,6 +17,8 @@ defmodule PelemayBackend.NIF do
     end
   end
 
+  def execute_engine(_code), do: :erlang.nif_error(:not_loaded)
+
   @doc """
   Copys 32bit float.
   ## Examples

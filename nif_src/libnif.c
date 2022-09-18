@@ -8,6 +8,138 @@
 
 #include <cblas.h>
 
+#include "opcode.h"
+
+typedef struct code {
+    ErlNifUInt64 opcode;
+    ERL_NIF_TERM operand;
+} code_t;
+
+typedef struct p_register {
+    enum register_type type;
+    ERL_NIF_TERM content;
+} p_register_t;
+
+bool getcode(ErlNifEnv *env, ERL_NIF_TERM list, code_t **code, unsigned *length, ERL_NIF_TERM *exception)
+{
+    if(__builtin_expect(!enif_get_list_length(env, list, length), false)) {
+        *exception = enif_make_badarg(env);
+        return false;
+    }
+    *code = enif_alloc(*length * sizeof(code_t));
+    if(__builtin_expect(*code == NULL, false)) {
+        *exception = enif_raise_exception(env, enif_make_string(env, "Fail to alloc memory", ERL_NIF_LATIN1));
+        return false;
+    }
+    ERL_NIF_TERM tail = list;
+    code_t *code_p = *code;
+    unsigned l = *length;
+    while(l > 0) {
+        list = tail;
+        ERL_NIF_TERM head;
+        if(__builtin_expect(!enif_get_list_cell(env, list, &head, &tail), false)) {
+            enif_free(*code);
+            *exception = enif_raise_exception(env, enif_make_string(env, "Should be list", ERL_NIF_LATIN1));
+            return false;
+        }
+        int arity;
+        const ERL_NIF_TERM *array;
+        if(__builtin_expect(!enif_get_tuple(env, head, &arity, &array) || arity != 2, false)) {
+            enif_free(*code);
+            *exception = enif_raise_exception(env, enif_make_string(env, "Should be list of tuple2", ERL_NIF_LATIN1));
+            return false;
+        }
+        if(__builtin_expect(!enif_get_uint64(env, array[0], &code_p->opcode), false)) {
+            enif_free(*code);
+            *exception = enif_raise_exception(env, enif_make_string(env, "Invalid opcode", ERL_NIF_LATIN1));
+            return false;
+        }
+        code_p->operand = array[1];
+        code_p++;
+        l--;
+    }
+    return true;
+}
+
+bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *reason)
+{
+    p_register_t registers[NUM_REGISTERS + 1];
+    for(code_t *code_p = code; code_length > 0; code_length--, code_p++) {
+        registers[NUM_REGISTERS].type = type_undefined; // invalid register
+
+        if(__builtin_expect(code_p->opcode & MASK_RESERVED, 0)) {
+            *reason = enif_make_string(env, "Should not use reserved bit", ERL_NIF_LATIN1);
+            return false;
+        }
+        uint_fast16_t inst = (code_p->opcode & MASK_INSTRUCTION) >> SHIFT_INSTRUCTION;
+        uint_fast8_t used_registers = (code_p->opcode & MASK_USED_REGISTERS) >> SHIFT_USED_REGISTERS;
+
+        uint_fast8_t rd = (code_p->opcode & MASK_RD) >> SHIFT_RD;
+        uint_fast8_t rs1, rs2, rs3, rs4, rs5, rs6, rs7;
+        rs1 = rs2 = rs3 = rs4 = rs5 = rs6 = rs7 = NUM_REGISTERS; // set to invalid register
+
+        switch(used_registers) {
+            case 7:
+                rs7 = (code_p->opcode & MASK_RS7) >> SHIFT_RS7;
+            case 6:
+                rs6 = (code_p->opcode & MASK_RS6) >> SHIFT_RS6;
+            case 5:
+                rs5 = (code_p->opcode & MASK_RS5) >> SHIFT_RS5;
+            case 4:
+                rs4 = (code_p->opcode & MASK_RS4) >> SHIFT_RS4;
+            case 3:
+                rs3 = (code_p->opcode & MASK_RS3) >> SHIFT_RS3;
+            case 2:
+                rs2 = (code_p->opcode & MASK_RS2) >> SHIFT_RS2;
+            case 1:
+                rs1 = (code_p->opcode & MASK_RS1) >> SHIFT_RS1;
+            case 0:
+                break;
+        }
+
+        uint_fast8_t is_used_operand = (code_p->opcode & MASK_IS_USE_OPERAND) >> SHIFT_IS_USE_OPERAND;
+        uint_fast8_t bit_type_binary = (code_p->opcode & MASK_BIT_TYPE_BINARY) >> SHIFT_BIT_TYPE_BINARY;
+        uint_fast8_t type_binary = (code_p->opcode & MASK_TYPE_BINARY) >> SHIFT_TYPE_BINARY;
+
+        enif_fprintf(stdout, "instruction: %04X\n", inst);
+        switch(inst) {
+            default:
+                {
+                    const char *err = "unrecognized instruction %04X";
+                    size_t length = strlen(err) + 1;
+                    char *error_message = enif_alloc(length);
+                    enif_snprintf(error_message, length, err, inst);
+                    *reason = enif_make_string(env, error_message, ERL_NIF_LATIN1);
+                    return false;
+                }
+        }
+    }
+    return true;
+}
+
+static ERL_NIF_TERM execute_engine(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    if(__builtin_expect(argc != 1, false)) {
+        return enif_make_badarg(env);
+    }
+    ERL_NIF_TERM tail = argv[0];
+    unsigned length;
+    code_t *code;
+    ERL_NIF_TERM exception;
+
+    if(__builtin_expect(!getcode(env, argv[0], &code, &length, &exception), false)) {
+        return exception;
+    }
+    code_t *code_p = code;
+    ERL_NIF_TERM reason;
+    if(execute(env, code, length, &reason)) {
+        enif_free(code);
+        return enif_make_atom(env, "ok");
+    } else {
+        enif_free(code);
+        return enif_make_tuple2(env, enif_make_atom(env, "error"), reason);
+    }
+}
 
 static ERL_NIF_TERM scopy_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
@@ -58,6 +190,7 @@ static ERL_NIF_TERM scopy_sscal_nif(ErlNifEnv *env, int argc, const ERL_NIF_TERM
 
 static ErlNifFunc nif_funcs [] =
 {
+    {"execute_engine", 1, execute_engine},
     {"scopy_nif", 3, scopy_nif},
     {"scopy_sscal_nif", 4, scopy_sscal_nif},
 };

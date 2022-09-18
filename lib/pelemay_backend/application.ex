@@ -10,6 +10,8 @@ defmodule PelemayBackend.Application do
     children = [
       # Starts a worker by calling: PelemayBackend.Worker.start_link(arg)
       # {PelemayBackend.Worker, arg}
+      PelemayBackend.Defn.Lock,
+      PelemayBackend.Defn.LockedCache
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
