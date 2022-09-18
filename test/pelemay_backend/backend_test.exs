@@ -7,6 +7,10 @@ defmodule PelemayBackend.BackendTest do
     :ok
   end
 
+  test "multiply scalar and vector" do
+    assert Nx.multiply(2.0, Nx.tensor([1.0, 2.0], type: {:f, 32})) == Nx.tensor([2.0, 4.0], type: {:f, 32})
+  end
+
   @precision_error_doctests [
     expm1: 1,
     erfc: 1,
@@ -212,5 +216,4 @@ defmodule PelemayBackend.BackendTest do
         @inherently_unsupported_doctests ++
         @unrelated_doctests ++
         @untest_doctests
-
 end
