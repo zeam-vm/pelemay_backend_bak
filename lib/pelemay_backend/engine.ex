@@ -26,13 +26,13 @@ defmodule PelemayBackend.Engine do
   """
   def instruction_code() do
     %{
-      scal: 0x00,
-      sscal: 0x01,
-      copy: 0x02,
-      dot: 0x03,
-      axpy: 0x04,
-      gemv: 0x10,
-      gemm: 0x20
+      scal: 0x0000,
+      sscal: 0x0001,
+      copy: 0x0002,
+      dot: 0x0003,
+      axpy: 0x0004,
+      gemv: 0x1000,
+      gemm: 0x2000
     }
   end
 

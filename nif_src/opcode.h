@@ -14,8 +14,8 @@ enum instruction {
     INST_COPY = 0x2,
     INST_DOT = 0x3,
     INST_AXPY = 0x4,
-    INST_GEMV = 0x10,
-    INST_GEMM = 0x20,
+    INST_GEMV = 0x1000,
+    INST_GEMM = 0x2000,
 };
 
 
