@@ -32,7 +32,9 @@ defmodule PelemayBackend.Engine do
       dot: 0x0003,
       axpy: 0x0004,
       gemv: 0x1000,
-      gemm: 0x2000
+      gemm: 0x2000,
+      pusht: 0x8000,
+      sendt: 0x8001
     }
   end
 
@@ -154,16 +156,10 @@ defmodule PelemayBackend.Engine do
 
     #{c_code(:inst)}
 
-    enum register_type {
+    enum stack_type {
       type_undefined,
-      type_s64,
-      type_u64,
-      type_f64,
-      type_complex,
-      type_binary,
-      type_tuple2,
-      type_tuple3,
-      type_pid,
+      type_tensor,
+      type_error,
     };
 
     enum type_binary {
@@ -220,7 +216,7 @@ defmodule PelemayBackend.Engine do
     instruction_code()
     |> Map.keys()
     |> Enum.map(&Atom.to_string/1)
-    |> Enum.map(&"(^ *#{&1} +(?<#{&1}>.*)$)")
+    |> Enum.map(&"(^ *(?<#{&1}>#{&1}.*)$)")
     |> Enum.join("|")
     |> Regex.compile!()
   end
@@ -235,10 +231,16 @@ defmodule PelemayBackend.Engine do
     String.split(code, "\n")
     |> Stream.reject(&(&1 == ""))
     |> Stream.map(&Regex.named_captures(r, &1))
+    |> Stream.reject(&is_nil/1)
     |> Stream.map(&Map.reject(&1, fn {_k, v} -> v == "" end))
     |> Enum.reduce({[], binding}, fn map, {acc, binding} ->
       inst = Map.keys(map) |> hd()
-      {args, binding} = Map.get(map, inst, "") |> Code.eval_string(binding)
+
+      {args, binding} =
+        Map.get(map, inst, "")
+        |> String.replace_prefix(inst, "")
+        |> Code.eval_string(binding)
+
       inst = String.to_atom(inst)
       {acc ++ [{inst, args, binding}], binding}
     end)
@@ -249,16 +251,40 @@ defmodule PelemayBackend.Engine do
     |> Enum.to_list()
   end
 
-  defp encode(:scal, _args, _binding) do
-    Logger.debug("scal")
+  defp encode(:scal, args, _binding) do
+    Logger.debug("scal #{inspect args}")
+
+    code =
+      {
+        Map.get(instruction_code(), :scal),
+        {
+          Nx.type(args),
+          Nx.to_binary(args),
+          1
+        }
+      }
+
+    Logger.debug("generated code of scal: #{inspect(code)}")
+
+    code
   end
 
   defp encode(:sscal, _args, _binding) do
     Logger.debug("sscal")
   end
 
-  defp encode(:copy, _args, _binding) do
-    Logger.debug("scal")
+  defp encode(:copy, args, _binding) do
+    Logger.debug("copy")
+
+    code =
+      {
+        Map.get(instruction_code(), :copy),
+        args
+      }
+
+    Logger.debug("generated code of copy: #{inspect(code)}")
+
+    code
   end
 
   defp encode(:dot, _args, _binding) do
@@ -275,5 +301,38 @@ defmodule PelemayBackend.Engine do
 
   defp encode(:gemm, _args, _binding) do
     Logger.debug("gemm")
+  end
+
+  defp encode(:pusht, args, _binding) do
+    Logger.debug("pusht #{inspect(args)}")
+
+    code =
+      {
+        Map.get(instruction_code(), :pusht),
+        {
+          Nx.size(args),
+          Nx.shape(args),
+          Nx.type(args),
+          Nx.to_binary(args)
+        }
+      }
+
+    Logger.debug("generated code of pusht: #{inspect(code)}")
+
+    code
+  end
+
+  defp encode(:sendt, args, _binding) do
+    Logger.debug("sendt #{inspect args}")
+
+    code =
+      {
+        Map.get(instruction_code(), :sendt),
+        args
+      }
+
+    Logger.debug("generated code of sendt: #{inspect(code)}")
+
+    code
   end
 end

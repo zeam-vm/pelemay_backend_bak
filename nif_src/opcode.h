@@ -16,19 +16,15 @@ enum instruction {
     INST_AXPY = 0x4,
     INST_GEMV = 0x1000,
     INST_GEMM = 0x2000,
+    INST_PUSHT = 0x8000,
+    INST_SENDT = 0x8001,
 };
 
 
-enum register_type {
+enum stack_type {
   type_undefined,
-  type_s64,
-  type_u64,
-  type_f64,
-  type_complex,
-  type_binary,
-  type_tuple2,
-  type_tuple3,
-  type_pid,
+  type_tensor,
+  type_error,
 };
 
 enum type_binary {
