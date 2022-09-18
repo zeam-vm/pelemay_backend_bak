@@ -31,6 +31,7 @@ defmodule PelemayBackend.Defn do
     fn [args] ->
       {time, lock} =
         :timer.tc(fn ->
+          nil
           # PelemayBackend.Defn.Lock.lock(run_key(executable))
         end)
 
@@ -44,9 +45,9 @@ defmodule PelemayBackend.Defn do
         end)
 
       if debug? do
-        #Logger.debug(
+        # Logger.debug(
         #  "PelemayBackend execution on device #{executable.device_id} in #{us_to_ms(time)}ms"
-        #)
+        # )
       end
 
       res
@@ -81,7 +82,9 @@ defmodule PelemayBackend.Defn do
 
   defp maybe_outfeed(lock, executable, args, used_inputs, outputs, hooks, run_options)
        when hooks == %{} do
-    Logger.debug("maybe_outfeed(lock: #{inspect(lock)}, executable: #{inspect(executable)}, args: #{inspect(args)}, used_inputs: #{inspect(used_inputs)}, outputs: #{inspect(outputs)}, hooks: #{inspect(hooks)}, run_options: #{inspect(run_options)}")
+    Logger.debug(
+      "maybe_outfeed(lock: #{inspect(lock)}, executable: #{inspect(executable)}, args: #{inspect(args)}, used_inputs: #{inspect(used_inputs)}, outputs: #{inspect(outputs)}, hooks: #{inspect(hooks)}, run_options: #{inspect(run_options)}"
+    )
 
     try do
       Logger.debug("args: #{inspect(args)}")
@@ -96,7 +99,7 @@ defmodule PelemayBackend.Defn do
         scal Enum.at(args, 0)
         sendt self()
         """
-        |> PelemayBackend.Engine.assemble([args: args])
+        |> PelemayBackend.Engine.assemble(args: args)
 
       Logger.debug("code: #{inspect(code)}")
 
@@ -108,7 +111,6 @@ defmodule PelemayBackend.Defn do
       rescue
         e in ErlangError -> raise RuntimeError, message: List.to_string(e.original)
       end
-
     after
       # PelemayBackend.Defn.Lock.unlock(lock)
     end
@@ -118,47 +120,50 @@ defmodule PelemayBackend.Defn do
         Nx.from_binary(binary, type)
         |> Nx.reshape(shape)
         |> then(&[&1])
-    after 5000 ->
-      raise RuntimeError, message: "timeout"
+    after
+      5000 ->
+        raise RuntimeError, message: "timeout"
     end
 
-    #try do
+    # try do
     #  buffers =
     #    args
     #    |> filter_inputs(used_inputs)
     #    |> EXLA.Defn.Buffers.from_nx!()
 
     #  EXLA.Executable.run(executable, [buffers], run_options)
-    #else
+    # else
     #  [result] -> [EXLA.Defn.Buffers.to_nx!(result, outputs)]
-    #after
+    # after
     #  EXLA.Defn.Lock.unlock(lock)
-    #end
+    # end
   end
 
   defp maybe_outfeed(lock, executable, args, used_inputs, outputs, hooks, run_options) do
-    Logger.debug("maybe_outfeed(lock: #{inspect(lock)}, executable: #{inspect(executable)}, args: #{inspect(args)}, used_inputs: #{inspect(used_inputs)}, outputs: #{inspect(outputs)}, hooks: #{inspect(hooks)}, run_options: #{inspect(run_options)}")
+    Logger.debug(
+      "maybe_outfeed(lock: #{inspect(lock)}, executable: #{inspect(executable)}, args: #{inspect(args)}, used_inputs: #{inspect(used_inputs)}, outputs: #{inspect(outputs)}, hooks: #{inspect(hooks)}, run_options: #{inspect(run_options)}"
+    )
 
-    #buffers =
+    # buffers =
     #  args
     #  |> filter_inputs(used_inputs)
     #  |> EXLA.Defn.Buffers.from_nx!()
 
-    #{:ok, runner} =
+    # {:ok, runner} =
     #  EXLA.Defn.Runner.start_link(lock, fn ->
     #    EXLA.Executable.run(executable, [buffers], run_options)
     #  end)
 
-    #{:ok, outfeed} = EXLA.Defn.Outfeed.start_child(executable, hooks)
-    #_ = EXLA.Defn.Lock.transfer(lock, fn -> send(runner, lock) end, outfeed)
+    # {:ok, outfeed} = EXLA.Defn.Outfeed.start_child(executable, hooks)
+    # _ = EXLA.Defn.Lock.transfer(lock, fn -> send(runner, lock) end, outfeed)
 
-    #ref = Process.monitor(outfeed)
+    # ref = Process.monitor(outfeed)
 
-    #receive do
+    # receive do
     #  {:DOWN, ^ref, _, _, _} ->
     #    [result] = EXLA.Defn.Runner.read(runner)
     #    [EXLA.Defn.Buffers.to_nx!(result, outputs)]
-    #end
+    # end
   end
 
   defp run_key(%{}), do: :global_lock
@@ -241,7 +246,7 @@ defmodule PelemayBackend.Defn do
     #  Logger.debug("EXLA compilation#{hit_or_miss} in #{us_to_ms(time)}ms")
     # end
 
-    #{executable, used_inputs, outputs, hooks, extra, debug?}
+    # {executable, used_inputs, outputs, hooks, extra, debug?}
     {%{}, nil, nil, %{}, :ok, false}
   end
 
