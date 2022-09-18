@@ -252,17 +252,16 @@ defmodule PelemayBackend.Engine do
   end
 
   defp encode(:scal, args, _binding) do
-    Logger.debug("scal #{inspect args}")
+    Logger.debug("scal #{inspect(args)}")
 
-    code =
+    code = {
+      Map.get(instruction_code(), :scal),
       {
-        Map.get(instruction_code(), :scal),
-        {
-          Nx.type(args),
-          Nx.to_binary(args),
-          1
-        }
+        Nx.type(args),
+        Nx.to_binary(args),
+        1
       }
+    }
 
     Logger.debug("generated code of scal: #{inspect(code)}")
 
@@ -276,11 +275,10 @@ defmodule PelemayBackend.Engine do
   defp encode(:copy, args, _binding) do
     Logger.debug("copy")
 
-    code =
-      {
-        Map.get(instruction_code(), :copy),
-        args
-      }
+    code = {
+      Map.get(instruction_code(), :copy),
+      args
+    }
 
     Logger.debug("generated code of copy: #{inspect(code)}")
 
@@ -306,16 +304,15 @@ defmodule PelemayBackend.Engine do
   defp encode(:pusht, args, _binding) do
     Logger.debug("pusht #{inspect(args)}")
 
-    code =
+    code = {
+      Map.get(instruction_code(), :pusht),
       {
-        Map.get(instruction_code(), :pusht),
-        {
-          Nx.size(args),
-          Nx.shape(args),
-          Nx.type(args),
-          Nx.to_binary(args)
-        }
+        Nx.size(args),
+        Nx.shape(args),
+        Nx.type(args),
+        Nx.to_binary(args)
       }
+    }
 
     Logger.debug("generated code of pusht: #{inspect(code)}")
 
@@ -323,13 +320,12 @@ defmodule PelemayBackend.Engine do
   end
 
   defp encode(:sendt, args, _binding) do
-    Logger.debug("sendt #{inspect args}")
+    Logger.debug("sendt #{inspect(args)}")
 
-    code =
-      {
-        Map.get(instruction_code(), :sendt),
-        args
-      }
+    code = {
+      Map.get(instruction_code(), :sendt),
+      args
+    }
 
     Logger.debug("generated code of sendt: #{inspect(code)}")
 
