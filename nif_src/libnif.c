@@ -10,15 +10,17 @@
 
 #include "opcode.h"
 
+#define MAX_STACK 1024
+
 typedef struct code {
     ErlNifUInt64 opcode;
     ERL_NIF_TERM operand;
 } code_t;
 
-typedef struct p_register {
+typedef struct p_stack {
     enum register_type type;
     ERL_NIF_TERM content;
-} p_register_t;
+} p_stack_t;
 
 bool getcode(ErlNifEnv *env, ERL_NIF_TERM list, code_t **code, unsigned *length, ERL_NIF_TERM *exception)
 {
@@ -63,43 +65,14 @@ bool getcode(ErlNifEnv *env, ERL_NIF_TERM list, code_t **code, unsigned *length,
 
 bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *reason)
 {
-    p_register_t registers[NUM_REGISTERS + 1];
+    p_stack_t stack[MAX_STACK];
+    
     for(code_t *code_p = code; code_length > 0; code_length--, code_p++) {
-        registers[NUM_REGISTERS].type = type_undefined; // invalid register
-
         if(__builtin_expect(code_p->opcode & MASK_RESERVED, 0)) {
             *reason = enif_make_string(env, "Should not use reserved bit", ERL_NIF_LATIN1);
             return false;
         }
         uint_fast16_t inst = (code_p->opcode & MASK_INSTRUCTION) >> SHIFT_INSTRUCTION;
-        uint_fast8_t used_registers = (code_p->opcode & MASK_USED_REGISTERS) >> SHIFT_USED_REGISTERS;
-
-        uint_fast8_t rd = (code_p->opcode & MASK_RD) >> SHIFT_RD;
-        uint_fast8_t rs1, rs2, rs3, rs4, rs5, rs6, rs7;
-        rs1 = rs2 = rs3 = rs4 = rs5 = rs6 = rs7 = NUM_REGISTERS; // set to invalid register
-
-        switch(used_registers) {
-            case 7:
-                rs7 = (code_p->opcode & MASK_RS7) >> SHIFT_RS7;
-            case 6:
-                rs6 = (code_p->opcode & MASK_RS6) >> SHIFT_RS6;
-            case 5:
-                rs5 = (code_p->opcode & MASK_RS5) >> SHIFT_RS5;
-            case 4:
-                rs4 = (code_p->opcode & MASK_RS4) >> SHIFT_RS4;
-            case 3:
-                rs3 = (code_p->opcode & MASK_RS3) >> SHIFT_RS3;
-            case 2:
-                rs2 = (code_p->opcode & MASK_RS2) >> SHIFT_RS2;
-            case 1:
-                rs1 = (code_p->opcode & MASK_RS1) >> SHIFT_RS1;
-            case 0:
-                break;
-        }
-
-        uint_fast8_t is_used_operand = (code_p->opcode & MASK_IS_USE_OPERAND) >> SHIFT_IS_USE_OPERAND;
-        uint_fast8_t bit_type_binary = (code_p->opcode & MASK_BIT_TYPE_BINARY) >> SHIFT_BIT_TYPE_BINARY;
-        uint_fast8_t type_binary = (code_p->opcode & MASK_TYPE_BINARY) >> SHIFT_TYPE_BINARY;
 
         enif_fprintf(stdout, "instruction: %04X\n", inst);
         switch(inst) {
