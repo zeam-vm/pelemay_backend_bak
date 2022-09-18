@@ -16,11 +16,11 @@ defmodule PelemayBackend.Defn do
 
   @doc false
   def __compile__(key, vars, fun, options) do
-    Logger.debug(
-      "__compile__(key: #{inspect(key)}, vars: #{inspect(vars)}, fun: #{inspect(fun)}, options: #{inspect(options)})"
-    )
+    #Logger.debug(
+    #  "__compile__(key: #{inspect(key)}, vars: #{inspect(vars)}, fun: #{inspect(fun)}, options: #{inspect(options)})"
+    #)
 
-    Logger.debug("fun #{inspect(fun)}(#{inspect(vars)}): #{inspect(fun.(vars))}")
+    #Logger.debug("fun #{inspect(fun)}(#{inspect(vars)}): #{inspect(fun.(vars))}")
 
     {run_options, compile_options} = Keyword.pop(options, :run_options, [])
     callback = &to_root_computation(key, &1, &2, &3, compile_options)
@@ -55,9 +55,9 @@ defmodule PelemayBackend.Defn do
   end
 
   defp to_root_computation(key, expr, used_shapes, used_hooks, options) do
-    Logger.debug(
-      "to_root_computation(key: #{inspect(key)}, expr: #{inspect(expr)}, used_shapes: #{inspect(used_shapes)}, used_hooks: #{inspect(used_hooks)}, options: #{inspect(options)})"
-    )
+    #Logger.debug(
+    #  "to_root_computation(key: #{inspect(key)}, expr: #{inspect(expr)}, used_shapes: #{inspect(used_shapes)}, used_hooks: #{inspect(used_hooks)}, options: #{inspect(options)})"
+    #)
 
     # builder = EXLA.Builder.new(inspect(key))
 
@@ -82,12 +82,12 @@ defmodule PelemayBackend.Defn do
 
   defp maybe_outfeed(lock, executable, args, used_inputs, outputs, hooks, run_options)
        when hooks == %{} do
-    Logger.debug(
-      "maybe_outfeed(lock: #{inspect(lock)}, executable: #{inspect(executable)}, args: #{inspect(args)}, used_inputs: #{inspect(used_inputs)}, outputs: #{inspect(outputs)}, hooks: #{inspect(hooks)}, run_options: #{inspect(run_options)}"
-    )
+    #Logger.debug(
+    #  "maybe_outfeed(lock: #{inspect(lock)}, executable: #{inspect(executable)}, args: #{inspect(args)}, used_inputs: #{inspect(used_inputs)}, outputs: #{inspect(outputs)}, hooks: #{inspect(hooks)}, run_options: #{inspect(run_options)}"
+    #)
 
     try do
-      Logger.debug("args: #{inspect(args)}")
+      #Logger.debug("args: #{inspect(args)}")
 
       # It assumes the requested calculation is to multiply a scalar and a tensor (including a scalar).
       # It also assumes the 1st argment is a scalar, and the type of the 2nd argument is `{:f, 32}`.
@@ -101,7 +101,7 @@ defmodule PelemayBackend.Defn do
         """
         |> PelemayBackend.Engine.assemble(args: args)
 
-      Logger.debug("code: #{inspect(code)}")
+      #Logger.debug("code: #{inspect(code)}")
 
       try do
         case PelemayBackend.Engine.execute(code) do
@@ -140,9 +140,9 @@ defmodule PelemayBackend.Defn do
   end
 
   defp maybe_outfeed(lock, executable, args, used_inputs, outputs, hooks, run_options) do
-    Logger.debug(
-      "maybe_outfeed(lock: #{inspect(lock)}, executable: #{inspect(executable)}, args: #{inspect(args)}, used_inputs: #{inspect(used_inputs)}, outputs: #{inspect(outputs)}, hooks: #{inspect(hooks)}, run_options: #{inspect(run_options)}"
-    )
+    #Logger.debug(
+    #  "maybe_outfeed(lock: #{inspect(lock)}, executable: #{inspect(executable)}, args: #{inspect(args)}, used_inputs: #{inspect(used_inputs)}, outputs: #{inspect(outputs)}, hooks: #{inspect(hooks)}, run_options: #{inspect(run_options)}"
+    #)
 
     # buffers =
     #  args
@@ -171,9 +171,9 @@ defmodule PelemayBackend.Defn do
   ## Compile
 
   defp compile(key, vars, fun, options, to_used, to_computation) do
-    Logger.debug(
-      "compile(key: #{inspect(key)}, vars: #{inspect(vars)}, fun: #{inspect(fun)}, options: #{inspect(options)}, to_used: #{inspect(to_used)}, to_computation: #{inspect(to_computation)}"
-    )
+    #Logger.debug(
+    #  "compile(key: #{inspect(key)}, vars: #{inspect(vars)}, fun: #{inspect(fun)}, options: #{inspect(options)}, to_used: #{inspect(to_used)}, to_computation: #{inspect(to_computation)}"
+    #)
 
     # {{expr_cache_fun, comp_cache_fun}, options} =
     #  case Keyword.pop(options, :cache, true) do

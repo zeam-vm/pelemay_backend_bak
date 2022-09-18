@@ -81,11 +81,11 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
         }
         uint_fast16_t inst = (code_p->opcode & MASK_INSTRUCTION) >> SHIFT_INSTRUCTION;
 
-        enif_fprintf(stdout, "instruction: %04X\n", inst);
+        // enif_fprintf(stdout, "instruction: %04X\n", inst);
         switch(inst) {
             case INST_PUSHT:
                 {
-                    enif_fprintf(stdout, "inst: pusht\n");
+                    // enif_fprintf(stdout, "inst: pusht\n");
 
                     /*
                      * Push the operand to the stack.
@@ -118,7 +118,7 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
 
             case INST_COPY:
                 {
-                    enif_fprintf(stdout, "inst: copy\n");
+                    // enif_fprintf(stdout, "inst: copy\n");
 
                     /*
                      * Copys the binary of the top of the stack.
@@ -200,7 +200,7 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
 
             case INST_SCAL:
                 {
-                    enif_fprintf(stdout, "inst: scal\n");
+                    // enif_fprintf(stdout, "inst: scal\n");
 
                     /*
                      * Scales a tensor by a constant
@@ -331,7 +331,7 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
 
             case INST_SENDT:
                 {
-                    enif_fprintf(stdout, "inst: sendt\n");
+                    // enif_fprintf(stdout, "inst: sendt\n");
 
                     /*
                      * Sends a tensor to the process.
