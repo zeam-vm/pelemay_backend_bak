@@ -17,19 +17,7 @@ defmodule PelemayBackend.Engine do
   def key_opcode() do
     [
       :instruction,
-      :is_use_operand,
-      :bit_type_binary,
-      :type_binary,
-      :used_registers,
-      :reserved,
-      :rd,
-      :rs1,
-      :rs2,
-      :rs3,
-      :rs4,
-      :rs5,
-      :rs6,
-      :rs7
+      :reserved
     ]
   end
 
@@ -60,35 +48,11 @@ defmodule PelemayBackend.Engine do
   """
   def opcode(keyword) do
     instruction = Keyword.get(keyword, :instruction, 0)
-    is_use_operand = Keyword.get(keyword, :is_use_operand, 0)
-    bit_type_binary = Keyword.get(keyword, :bit_type_binary, 0)
-    type_binary = Keyword.get(keyword, :type_binary, 0)
-    used_registers = Keyword.get(keyword, :used_registers, 0)
     reserved = Keyword.get(keyword, :reserved, 0)
-    rd = Keyword.get(keyword, :rd, 0)
-    rs1 = Keyword.get(keyword, :rs1, 0)
-    rs2 = Keyword.get(keyword, :rs2, 0)
-    rs3 = Keyword.get(keyword, :rs3, 0)
-    rs4 = Keyword.get(keyword, :rs4, 0)
-    rs5 = Keyword.get(keyword, :rs5, 0)
-    rs6 = Keyword.get(keyword, :rs6, 0)
-    rs7 = Keyword.get(keyword, :rs7, 0)
 
     <<opcode::size(64)>> = <<
-      rs7::5,
-      rs6::5,
-      rs5::5,
-      rs4::5,
-      rs3::5,
-      rs2::5,
-      rs1::5,
-      rd::5,
-      reserved::8,
-      used_registers::3,
-      type_binary::3,
-      bit_type_binary::2,
-      is_use_operand::1,
-      instruction::7
+      reserved::48,
+      instruction::16
     >>
 
     opcode
@@ -227,13 +191,18 @@ defmodule PelemayBackend.Engine do
       btb_c64 = 2,
       btb_c128 = 3,
     };
-
-    #define NUM_REGISTERS 32
-
     #endif // #{macro}
     """
   end
 
+  @spec put_c_header(
+          binary
+          | maybe_improper_list(
+              binary | maybe_improper_list(any, binary | []) | char,
+              binary | []
+            ),
+          any
+        ) :: :ok
   @doc """
   Puts c header code.
   """
