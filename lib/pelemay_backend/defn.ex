@@ -16,5 +16,6 @@ defmodule PelemayBackend.Defn do
 
   @doc false
   def __compile__(key, vars, fun, options) do
+    Logger.debug("__compile__(key: #{inspect key}, vars: #{inspect vars}, fun: #{inspect fun}, options: #{inspect options}")
   end
 end
