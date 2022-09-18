@@ -7,6 +7,7 @@ defmodule PelemayBackend.Backend do
   @behaviour Nx.Backend
   # @enforce_keys [:state]
 
+  @spec __struct__ :: %PelemayBackend.Backend{state: nil}
   @doc false
   defstruct [:state]
 
@@ -270,8 +271,8 @@ defmodule PelemayBackend.Backend do
   end
 
   defp jit(fun, args) do
-    Logger.debug("fun: #{inspect(fun)}")
-    Logger.debug("args: #{inspect(args)}")
+    # Logger.debug("fun: #{inspect(fun)}")
+    # Logger.debug("args: #{inspect(args)}")
     PelemayBackend.jit_apply(fun, args, on_conflict: :force)
   end
 

@@ -252,7 +252,7 @@ defmodule PelemayBackend.Engine do
   end
 
   defp encode(:scal, args, _binding) do
-    Logger.debug("scal #{inspect(args)}")
+    # Logger.debug("scal #{inspect(args)}")
 
     code = {
       Map.get(instruction_code(), :scal),
@@ -263,46 +263,46 @@ defmodule PelemayBackend.Engine do
       }
     }
 
-    Logger.debug("generated code of scal: #{inspect(code)}")
+    # Logger.debug("generated code of scal: #{inspect(code)}")
 
     code
   end
 
   defp encode(:sscal, _args, _binding) do
-    Logger.debug("sscal")
+    # Logger.debug("sscal")
   end
 
   defp encode(:copy, args, _binding) do
-    Logger.debug("copy")
+    # Logger.debug("copy")
 
     code = {
       Map.get(instruction_code(), :copy),
       args
     }
 
-    Logger.debug("generated code of copy: #{inspect(code)}")
+    # Logger.debug("generated code of copy: #{inspect(code)}")
 
     code
   end
 
   defp encode(:dot, _args, _binding) do
-    Logger.debug("dot")
+    # Logger.debug("dot")
   end
 
   defp encode(:axpy, _args, _binding) do
-    Logger.debug("axpy")
+    # Logger.debug("axpy")
   end
 
   defp encode(:gemv, _args, _binding) do
-    Logger.debug("gemv")
+    # Logger.debug("gemv")
   end
 
   defp encode(:gemm, _args, _binding) do
-    Logger.debug("gemm")
+    # Logger.debug("gemm")
   end
 
   defp encode(:pusht, args, _binding) do
-    Logger.debug("pusht #{inspect(args)}")
+    # Logger.debug("pusht #{inspect(args)}")
 
     code = {
       Map.get(instruction_code(), :pusht),
@@ -314,20 +314,20 @@ defmodule PelemayBackend.Engine do
       }
     }
 
-    Logger.debug("generated code of pusht: #{inspect(code)}")
+    # Logger.debug("generated code of pusht: #{inspect(code)}")
 
     code
   end
 
   defp encode(:sendt, args, _binding) do
-    Logger.debug("sendt #{inspect(args)}")
+    # Logger.debug("sendt #{inspect(args)}")
 
     code = {
       Map.get(instruction_code(), :sendt),
       args
     }
 
-    Logger.debug("generated code of sendt: #{inspect(code)}")
+    # Logger.debug("generated code of sendt: #{inspect(code)}")
 
     code
   end
