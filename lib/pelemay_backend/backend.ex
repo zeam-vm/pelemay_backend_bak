@@ -272,7 +272,7 @@ defmodule PelemayBackend.Backend do
   defp jit(fun, args) do
     Logger.debug("fun: #{inspect fun}")
     Logger.debug("args: #{inspect args}")
-    # Nx.Defn.jit_apply(fun, args, )
+    PelemayBackend.jit_apply(fun, args, on_conflict: :force)
   end
 
   ## Conversion helpers
