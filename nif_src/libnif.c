@@ -10,15 +10,17 @@
 
 #include "opcode.h"
 
+#define MAX_STACK 1024
+
 typedef struct code {
     ErlNifUInt64 opcode;
     ERL_NIF_TERM operand;
 } code_t;
 
-typedef struct p_register {
+typedef struct p_stack {
     enum register_type type;
     ERL_NIF_TERM content;
-} p_register_t;
+} p_stack_t;
 
 bool getcode(ErlNifEnv *env, ERL_NIF_TERM list, code_t **code, unsigned *length, ERL_NIF_TERM *exception)
 {
@@ -63,6 +65,8 @@ bool getcode(ErlNifEnv *env, ERL_NIF_TERM list, code_t **code, unsigned *length,
 
 bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *reason)
 {
+    p_stack_t stack[MAX_STACK];
+    
     for(code_t *code_p = code; code_length > 0; code_length--, code_p++) {
         if(__builtin_expect(code_p->opcode & MASK_RESERVED, 0)) {
             *reason = enif_make_string(env, "Should not use reserved bit", ERL_NIF_LATIN1);

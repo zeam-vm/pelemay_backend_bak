@@ -32,14 +32,7 @@ defmodule PelemayBackend.Engine do
       dot: 0x03,
       axpy: 0x04,
       gemv: 0x10,
-      gemm: 0x20,
-      lds: 0x80,
-      ldb: 0x81,
-      ldt2: 0x82,
-      ldt3: 0x83,
-      release: 0x84,
-      alloc: 0x85,
-      send: 0x86
+      gemm: 0x20
     }
   end
 
@@ -282,33 +275,5 @@ defmodule PelemayBackend.Engine do
 
   defp encode(:gemm, _args, _binding) do
     Logger.debug("gemm")
-  end
-
-  defp encode(:lds, _args, _binding) do
-    Logger.debug("lds")
-  end
-
-  defp encode(:ldb, _args, _binding) do
-    Logger.debug("ldb")
-  end
-
-  defp encode(:ldt2, _args, _binding) do
-    Logger.debug("ldt2")
-  end
-
-  defp encode(:ldt3, _args, _binding) do
-    Logger.debug("ldt3")
-  end
-
-  defp encode(:release, _args, _binding) do
-    Logger.debug("release")
-  end
-
-  defp encode(:alloc, _args, _binding) do
-    Logger.debug("alloc")
-  end
-
-  defp encode(:send, _args, _binding) do
-    Logger.debug("send")
   end
 end

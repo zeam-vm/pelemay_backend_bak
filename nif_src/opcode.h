@@ -16,13 +16,6 @@ enum instruction {
     INST_AXPY = 0x4,
     INST_GEMV = 0x10,
     INST_GEMM = 0x20,
-    INST_LDS = 0x80,
-    INST_LDB = 0x81,
-    INST_LDT2 = 0x82,
-    INST_LDT3 = 0x83,
-    INST_RELEASE = 0x84,
-    INST_ALLOC = 0x85,
-    INST_SEND = 0x86,
 };
 
 
