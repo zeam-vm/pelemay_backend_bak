@@ -687,7 +687,7 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                             return false;
                         }
                         stack_idx--;
-                        ErlNifUInt bool_branch = 0xff;
+                        unsigned int bool_branch = 0xff;
                         if(__builtin_expect(
                             stack[stack_idx].type != type_bool
                             || !enif_get_uint(env, stack[stack_idx].content, &bool_branch)
@@ -723,7 +723,7 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                     // enif_fprintf(stdout, "inst: return\n");
                     // enif_fprintf(stdout, "stack_idx: %u\n", stack_idx);
                     if(__builtin_expect(stack_idx != 0, false)) {
-                        *reason = enif_make_string(env, "stack is not zero at the end of code", ERL_NIF_LATIN1);
+                        *reason = enif_make_string(env, "stack is not zero at return", ERL_NIF_LATIN1);
                         return false;
                     }
                     return true;
@@ -814,7 +814,6 @@ static ERL_NIF_TERM execute_engine(ErlNifEnv *env, int argc, const ERL_NIF_TERM 
     if(__builtin_expect(argc != 1, false)) {
         return enif_make_badarg(env);
     }
-    ERL_NIF_TERM tail = argv[0];
     unsigned length;
     code_t *code;
     ERL_NIF_TERM exception;
@@ -822,7 +821,6 @@ static ERL_NIF_TERM execute_engine(ErlNifEnv *env, int argc, const ERL_NIF_TERM 
     if(__builtin_expect(!getcode(env, argv[0], &code, &length, &exception), false)) {
         return exception;
     }
-    code_t *code_p = code;
     ERL_NIF_TERM reason;
     if(execute(env, code, length, &reason)) {
         enif_free(code);
