@@ -18,6 +18,9 @@ enum instruction {
     INST_GEMM = 0x2000,
     INST_PUSHT = 0x8000,
     INST_SENDT = 0x8001,
+    INST_RETURN = 0x8002,
+    INST_SKIP = 0x8003,
+    INST_IS_SCALAR = 0x8004,
 };
 
 
@@ -25,6 +28,7 @@ enum stack_type {
   type_undefined,
   type_tensor,
   type_error,
+  type_bool,
 };
 
 enum type_binary {
