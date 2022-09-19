@@ -186,7 +186,8 @@ defmodule PelemayBackend.Backend do
   end
 
   binary_ops =
-    [:add, :subtract, :multiply, :power, :remainder, :divide, :atan2, :min, :max, :quotient] ++
+    # [:add, :subtract, :multiply, :power, :remainder, :divide, :atan2, :min, :max, :quotient] ++
+    [:add, :subtract, :power, :remainder, :divide, :atan2, :min, :max, :quotient] ++
       [:bitwise_and, :bitwise_or, :bitwise_xor, :left_shift, :right_shift] ++
       [:equal, :not_equal, :greater, :less, :greater_equal, :less_equal] ++
       [:logical_and, :logical_or, :logical_xor]
@@ -251,6 +252,24 @@ defmodule PelemayBackend.Backend do
       {:fft, [:tensor, :opts], [:tensor]},
       {:ifft, [:tensor, :opts], [:tensor]}
     ] ++
+      for(op <- binary_ops, do: {op, [:left, :right], [:left, :right]}) ++
+      for(op <- unary_ops, do: {op, [:tensor], [:tensor]})
+
+    for {name, args, tensor_args} <- callbacks do
+        args = Enum.map(args, &Macro.var(&1, __MODULE__))
+        tensor_args = Enum.map(tensor_args, &Macro.var(&1, __MODULE__))
+
+        @impl true
+        defdelegate unquote(name)(out, unquote_splicing(args)), to: Nx.BinaryBackend
+      end
+
+
+  binary_ops = [:multiply]
+
+  unary_ops = []
+
+  callbacks =
+    [] ++
       for(op <- binary_ops, do: {op, [:left, :right], [:left, :right]}) ++
       for(op <- unary_ops, do: {op, [:tensor], [:tensor]})
 
