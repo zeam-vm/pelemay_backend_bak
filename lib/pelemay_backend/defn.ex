@@ -28,11 +28,12 @@ defmodule PelemayBackend.Defn do
       pusht Enum.at(args, 0)
       copy
       is_scalar
-      skip {9, {:if, true}}
+      skip {10, {:if, true}}
       pusht Enum.at(args, 1)
       is_scalar
-      skip {3, {:if, true}}
+      skip {4, {:if, true}}
       sende {self(), ~c'multiply with two vectors is not supported.'}
+      pop2
       pop2
       return
       scal 1
