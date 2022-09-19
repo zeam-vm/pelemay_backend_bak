@@ -25,16 +25,23 @@ defmodule PelemayBackend.Defn do
     fn [args] ->
       code =
       """
-      is_scalar Enum.at(args, 0)
-      skip {5, {:if, true}}
       pusht Enum.at(args, 0)
-      copy
-      scal Enum.at(args, 1)
+      dup
+      is_scalar
+      skip {10, {:if, true}}
+      pusht Enum.at(args, 1)
+      dup
+      is_scalar
+      skip {3, {:if, true}}
+      sende
+      pop2
+      return
+      scal
       sendt self()
       return
       pusht Enum.at(args, 1)
-      copy
-      scal Enum.at(args, 0)
+      swap
+      scal
       sendt self()
       """
       |> PelemayBackend.Engine.assemble(args: args)
