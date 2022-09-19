@@ -134,7 +134,9 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                      * Now, copy supports only in case that the operand is nil.
                      * When the operand is nil, increment of the source adn the destination are 1.
                      * 
-                     * Now, copy supports only in case that Nx.type is {:f, 32}.
+                     * Now, copy supports only in case that Nx.type is as follows:
+                     * {:f, 32}
+                     * {:f, 64}
                      */
 
                     if(__builtin_expect(stack[stack_idx - 1].type != type_tensor, false)) {
@@ -174,9 +176,9 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                     if(__builtin_expect(
                         strncmp(type, "f", 1) != 0
                         || !enif_get_uint(env, array_type[1], &type_size)
-                        || type_size != 32,
+                        || !(type_size == 32 || type_size == 64),
                         false)) {
-                        *reason = enif_make_string(env, "Sorry, copy now supports only {:f, 32}", ERL_NIF_LATIN1);
+                        *reason = enif_make_string(env, "Sorry, copy now supports only {:f, 32} or {:f, 64}", ERL_NIF_LATIN1);
                         return false;
                     }
                     ErlNifBinary bin_in;
@@ -191,7 +193,20 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                     }
                     // omit check the operand is nil.
                     
-                    cblas_scopy(size, (float *)bin_in.data, 1, (float *)bin_out.data, 1);
+                    switch(type_size) {
+                        case 32:
+                            cblas_scopy(size, (float *)bin_in.data, 1, (float *)bin_out.data, 1);
+                            break;
+                        
+                        case 64:
+                            cblas_dcopy(size, (double *)bin_in.data, 1, (double *)bin_out.data, 1);
+                            break;
+                        
+                        default:
+                            *reason = enif_make_string(env, "unexpected", ERL_NIF_LATIN1);
+                            return false;
+                    }
+
 
                     ERL_NIF_TERM b = enif_make_binary(env, &bin_out);
                     stack[stack_idx - 1].content = enif_make_tuple4(env, array[0], array[1], array[2], b);
@@ -224,7 +239,9 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                      *   Nx.to_binary(args)
                      * }
                      *
-                     * Now, scal supports only in case that Nx.type is {:f, 32}.
+                     * Now, scal supports only in case that Nx.type is as follows:
+                     * {:f, 32}
+                     * {:f, 64}
                      */
 
                     if(__builtin_expect(stack[stack_idx - 1].type != type_tensor, false)) {
@@ -264,9 +281,9 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                     if(__builtin_expect(
                         strncmp(type, "f", 1) != 0
                         || !enif_get_uint(env, array_type[1], &type_size)
-                        || type_size != 32,
+                        || !(type_size == 32 || type_size == 64),
                         false)) {
-                        *reason = enif_make_string(env, "Sorry, scal now supports only {:f, 32} as a tensor", ERL_NIF_LATIN1);
+                        *reason = enif_make_string(env, "Sorry, scal now supports only {:f, 32} or {:f, 64} as a tensor", ERL_NIF_LATIN1);
                         return false;
                     }
                     ErlNifBinary bin;
@@ -295,10 +312,11 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                         *reason = enif_make_string(env, "Fail to get type in case of scal", ERL_NIF_LATIN1);
                         return false;
                     }
+                    unsigned int type_size_operand;
                     if(__builtin_expect(
                         strncmp(type, "f", 1) != 0
-                        || !enif_get_uint(env, array_type[1], &type_size)
-                        || !(type_size == 32 || type_size == 64),
+                        || !enif_get_uint(env, array_type[1], &type_size_operand)
+                        || !(type_size_operand == 32 || type_size_operand == 64),
                         false)) {
                         *reason = enif_make_string(env, "Sorry, scal now supports only {:f, 32} and {:f, 64} as a scalar", ERL_NIF_LATIN1);
                         return false;
@@ -308,13 +326,13 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                         *reason = enif_make_string(env, "Fail to get binary in case of scal", ERL_NIF_LATIN1);
                         return false;
                     }
-                    float scalar;
-                    switch(type_size) {
+                    double scalar;
+                    switch(type_size_operand) {
                         case 32:
-                            scalar = (float)((float *)bin_scalar.data)[0];
+                            scalar = (double)((float *)bin_scalar.data)[0];
                             break;
                         case 64:
-                            scalar = (float)((double *)bin_scalar.data)[0];
+                            scalar = (double)((double *)bin_scalar.data)[0];
                             break;
                         default:
                             *reason = enif_make_string(env, "unexpected", ERL_NIF_LATIN1);
@@ -325,7 +343,17 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                         *reason = enif_make_string(env, "Fail to get increment in case of scal", ERL_NIF_LATIN1);
                         return false;
                     }
-                    cblas_sscal(size, (float)scalar, (float *)bin.data, increment);
+                    switch(type_size) {
+                        case 32:
+                            cblas_sscal(size, (float)scalar, (float *)bin.data, increment);
+                            break;
+                        case 64:
+                            cblas_dscal(size, (double)scalar, (double *)bin.data, increment);
+                            break;
+                        default:
+                            *reason = enif_make_string(env, "unexpected", ERL_NIF_LATIN1);
+                            return false;
+                    }
                 }
                 break;
 
