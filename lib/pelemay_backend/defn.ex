@@ -26,22 +26,22 @@ defmodule PelemayBackend.Defn do
       code =
       """
       pusht Enum.at(args, 0)
-      dup
+      copy
       is_scalar
-      skip {10, {:if, true}}
+      skip {9, {:if, true}}
       pusht Enum.at(args, 1)
-      dup
       is_scalar
       skip {3, {:if, true}}
-      sende
+      sende {self(), ~c'multiply with two vectors is not supported.'}
       pop2
       return
-      scal
+      scal 1
       sendt self()
       return
       pusht Enum.at(args, 1)
+      copy
       swap
-      scal
+      scal 1
       sendt self()
       """
       |> PelemayBackend.Engine.assemble(args: args)
@@ -60,6 +60,9 @@ defmodule PelemayBackend.Defn do
           Nx.from_binary(binary, type)
           |> Nx.reshape(shape)
           |> then(&[&1])
+
+        {:error, reason} ->
+          raise RuntimeError, message: List.to_string(reason)
       after
         5000 ->
           raise RuntimeError, message: "timeout"

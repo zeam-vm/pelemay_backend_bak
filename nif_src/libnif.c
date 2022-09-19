@@ -139,6 +139,10 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                      * {:f, 64}
                      */
 
+                    if(__builtin_expect(stack_idx == 0, false)) {
+                        *reason = enif_make_string(env, "Stack limit is less than 0", ERL_NIF_LATIN1);
+                        return false;
+                    }
                     if(__builtin_expect(stack[stack_idx - 1].type != type_tensor, false)) {
                         *reason = enif_make_string(env, "Should be a tensor in case of copy", ERL_NIF_LATIN1);
                         return false;
@@ -218,20 +222,21 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                     // enif_fprintf(stdout, "inst: scal\n");
 
                     /*
-                     * Scales a tensor by a constant
+                     * Scales a tensor by a constant.
                      * 
-                     * The operand should be:
+                     * Pops the two values from the stack, and push the result.
+                     * 
+                     * The operand should be the positive integer as increment.
+                     * 
+                     * The stack top should be type_scalar:
                      * {
+                     *   Nx.size(args),
+                     *   Nx.shape(args),
                      *   Nx.type(args),
-                     *   Nx.to_binary(args),
-                     *   increment
+                     *   Nx.to_binary(args)
                      * }
                      * 
-                     * Now, scal supports the following as the type of the operand:
-                     * {:f, 32}
-                     * {:f, 64}
-                     * 
-                     * The stak top should be type_tensor:
+                     * The next of it should be type_tensor or type_scalar:
                      * {
                      *   Nx.size(args),
                      *   Nx.shape(args),
@@ -244,13 +249,24 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                      * {:f, 64}
                      */
 
-                    if(__builtin_expect(stack[stack_idx - 1].type != type_tensor, false)) {
-                        *reason = enif_make_string(env, "Should be a tensor in case of scal", ERL_NIF_LATIN1);
+                    if(__builtin_expect(stack_idx <= 1, false)) {
+                        *reason = enif_make_string(env, "Stack limit is less than 1", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    stack_idx -= 2;
+                    // stack[stack_idx + 1].type == type_scalar
+                    // stack[stack_idx].type == type.tensor or type.scalar
+
+                    // Get the given tensor
+                    if(__builtin_expect(
+                        !(stack[stack_idx].type == type_tensor || stack[stack_idx].type == type_scalar),
+                        false)) {
+                        *reason = enif_make_string(env, "Should be a tensor or a scalar in case of scal", ERL_NIF_LATIN1);
                         return false;
                     }
                     int arity;
                     const ERL_NIF_TERM *array;
-                    if(__builtin_expect(!enif_get_tuple(env, stack[stack_idx - 1].content, &arity, &array), false)) {
+                    if(__builtin_expect(!enif_get_tuple(env, stack[stack_idx].content, &arity, &array), false)) {
                         *reason = enif_make_string(env, "Stack top should be a tuple in case of scal", ERL_NIF_LATIN1);
                         return false;
                     }
@@ -292,56 +308,79 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                         return false;
                     }
 
-                    int arity_operand;
-                    const ERL_NIF_TERM *array_operand;
-                    if(__builtin_expect(!enif_get_tuple(env, code_p->operand, &arity_operand, &array_operand), false)) {
-                        *reason = enif_make_string(env, "Operand should be a tuple in case of scal", ERL_NIF_LATIN1);
-                        return false;
-                    }
-                    if(__builtin_expect(arity_operand != 3, false)) {
-                        *reason = enif_make_string(env, "The arity of tuple should be 3 in case of scal", ERL_NIF_LATIN1);
-                        return false;
-                    }
+                    // Get the given scalar
                     if(__builtin_expect(
-                        !enif_get_tuple(env, array_operand[0], &arity_type, &array_type)
-                        || arity_type != 2
-                        || !enif_get_atom_length(env, array_type[0], &typel, ERL_NIF_LATIN1)
-                        || (type = (char *)enif_alloc((typel + 1) * sizeof(char))) == NULL
-                        || !enif_get_atom(env, array_type[0], type, typel + 1, ERL_NIF_LATIN1),
+                        !(stack[stack_idx + 1].type == type_scalar),
+                        false)) {
+                        *reason = enif_make_string(env, "Should be a scalar in case of scal", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    int arity_s;
+                    const ERL_NIF_TERM *array_s;
+                    if(__builtin_expect(!enif_get_tuple(env, stack[stack_idx + 1].content, &arity_s, &array_s), false)) {
+                        *reason = enif_make_string(env, "Stack top should be a tuple in case of scal", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    if(__builtin_expect(arity_s != 4, false)) {
+                        *reason = enif_make_string(env, "The arity of tuple should be 4 in case of scal", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    ErlNifUInt64 size_s;
+                    if(__builtin_expect(!enif_get_uint64(env, array_s[0], &size_s), false)) {
+                        *reason = enif_make_string(env, "Fail to get uint64 in case of scal", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    if(__builtin_expect(size_s != 1, false)) {
+                        *reason = enif_make_string(env, "unexpected scalar but size_s != 1", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    int arity_type_s;
+                    const ERL_NIF_TERM *array_type_s;
+                    char *type_s;
+                    unsigned typel_s;
+                    unsigned int type_size_s;
+                    if(__builtin_expect(
+                        !enif_get_tuple(env, array_s[2], &arity_type_s, &array_type_s)
+                        || arity_type_s != 2
+                        || !enif_get_atom_length(env, array_type_s[0], &typel_s, ERL_NIF_LATIN1)
+                        || (type_s = (char *)enif_alloc((typel_s + 1) * sizeof(char))) == NULL
+                        || !enif_get_atom(env, array_type_s[0], type_s, typel_s + 1, ERL_NIF_LATIN1),
                         false)) {
                         *reason = enif_make_string(env, "Fail to get type in case of scal", ERL_NIF_LATIN1);
                         return false;
                     }
-                    unsigned int type_size_operand;
                     if(__builtin_expect(
-                        strncmp(type, "f", 1) != 0
-                        || !enif_get_uint(env, array_type[1], &type_size_operand)
-                        || !(type_size_operand == 32 || type_size_operand == 64),
+                        strncmp(type_s, "f", 1) != 0
+                        || !enif_get_uint(env, array_type_s[1], &type_size_s)
+                        || !(type_size_s == 32 || type_size_s == 64),
                         false)) {
-                        *reason = enif_make_string(env, "Sorry, scal now supports only {:f, 32} and {:f, 64} as a scalar", ERL_NIF_LATIN1);
+                        *reason = enif_make_string(env, "Sorry, scal now supports only {:f, 32} or {:f, 64} as a tensor", ERL_NIF_LATIN1);
                         return false;
                     }
-                    ErlNifBinary bin_scalar;
-                    if(__builtin_expect(!enif_inspect_binary(env, array_operand[1], &bin_scalar), false)) {
+                    ErlNifBinary bin_s;
+                    if(__builtin_expect(!enif_inspect_binary(env, array_s[3], &bin_s), false)) {
                         *reason = enif_make_string(env, "Fail to get binary in case of scal", ERL_NIF_LATIN1);
                         return false;
                     }
+
+                    // get operand
+                    ErlNifUInt64 increment;
+                    if(__builtin_expect(!enif_get_uint64(env, code_p->operand, &increment), false)) {
+                        *reason = enif_make_string(env, "Fail to get uint64 from operand in case of scal", ERL_NIF_LATIN1);
+                        return false;
+                    }
+
                     double scalar;
-                    switch(type_size_operand) {
+                    switch(type_size_s) {
                         case 32:
-                            scalar = (double)((float *)bin_scalar.data)[0];
+                            scalar = (double)((float *)bin_s.data)[0];
                             break;
                         case 64:
-                            scalar = (double)((double *)bin_scalar.data)[0];
+                            scalar = (double)((double *)bin_s.data)[0];
                             break;
                         default:
                             *reason = enif_make_string(env, "unexpected", ERL_NIF_LATIN1);
                             return false;
-                    }
-                    ErlNifUInt64 increment;
-                    if(__builtin_expect(!enif_get_uint64(env, array_operand[2], &increment), false)) {
-                        *reason = enif_make_string(env, "Fail to get increment in case of scal", ERL_NIF_LATIN1);
-                        return false;
                     }
                     switch(type_size) {
                         case 32:
@@ -354,6 +393,7 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                             *reason = enif_make_string(env, "unexpected", ERL_NIF_LATIN1);
                             return false;
                     }
+                    stack_idx++;
                 }
                 break;
 
@@ -467,18 +507,89 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                 }
                 break;
 
+            case INST_SENDE:
+                {
+                    // enif_fprintf(stdout, "inst: sende\n");
+
+                    /*
+                     * Sends an error.
+                     * 
+                     * The operand should be as follows:
+                     * {
+                     *   pid,
+                     *   Charlist
+                     * }
+                     *                      *
+                     * The sent message in case of type_tensor is:
+                     * 
+                     * The sent message in case of type_error is:
+                     * {
+                     *   :error,
+                     *   reason (Charlist)
+                     * }
+                     * 
+                     */
+
+                    int arity;
+                    const ERL_NIF_TERM *array;
+                    if(__builtin_expect(!enif_get_tuple(env, code_p->operand, &arity, &array), false)) {
+                        *reason = enif_make_string(env, "Operand should be a tuple in case of sende", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    if(__builtin_expect(arity != 2, false)) {
+                        *reason = enif_make_string(env, "The arity of tuple should be 2 in case of sende", ERL_NIF_LATIN1);
+                        return false;
+                    }
+
+                    ErlNifPid pid;
+                    if(__builtin_expect(!enif_get_local_pid(env, array[0], &pid), false)) {
+                        *reason = enif_make_string(env, "Fail to get pid from operand in case sende", ERL_NIF_LATIN1);
+                        return false;
+                    }
+
+                    ErlNifEnv *msg_env = enif_alloc_env();
+                    if(__builtin_expect(msg_env == NULL, false)) {
+                        *reason = enif_make_string(env, "Fail to get new environment in case sende", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    ERL_NIF_TERM message = enif_make_tuple2(env,
+                        enif_make_atom(env, "error"),
+                        array[1]
+                    );
+
+                    if(__builtin_expect(!enif_send(NULL, &pid, msg_env, message), false)) {
+                        *reason = enif_make_string(env, "Fail to send in case sende", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                }
+                break;
+
             case INST_IS_SCALAR:
                 {
                     // enif_fprintf(stdout, "inst: is_scalar\n");
 
+                    if(__builtin_expect(stack_idx == 0, false)) {
+                        *reason = enif_make_string(env, "Stack limit is less than 0", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    int arity;
+                    const ERL_NIF_TERM *array;
+                    if(__builtin_expect(
+                        !(stack[stack_idx - 1].type == type_tensor || stack[stack_idx - 1].type == type_scalar)
+                        || !enif_get_tuple(env, stack[stack_idx - 1].content, &arity, &array),
+                        false)) {
+                        *reason = enif_make_string(env, "The stack top should be type_tensor or type_scalar in case of is_scalar", ERL_NIF_LATIN1);
+                        return false;
+                    }
                     ErlNifUInt64 size;
-                    if(__builtin_expect(!enif_get_uint64(env, code_p->operand, &size), false)) {
+                    if(__builtin_expect(!enif_get_uint64(env, array[0], &size), false)) {
                         *reason = enif_make_string(env, "Fail to get uint64 in case is_scalar", ERL_NIF_LATIN1);
                         return false;
                     }
                     stack[stack_idx].type = type_bool;
                     if(size == 1) {
                         stack[stack_idx].content = enif_make_uint(env, 1);
+                        stack[stack_idx - 1].type = type_scalar;
                     } else {
                         stack[stack_idx].content = enif_make_uint(env, 0);
                     }
@@ -582,6 +693,7 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                             || !enif_get_uint(env, stack[stack_idx].content, &bool_branch)
                             || !(bool_branch == 0 || bool_branch == 1), 
                             false)) {
+                            // enif_fprintf(stdout, "stack[stack_idx].type: %s\n", stack[stack_idx].type == type_bool ? "type_bool" : "other");
                             *reason = enif_make_string(env, "The stack top should be type_bool in case of conditional branch", ERL_NIF_LATIN1);
                             return false;
                         }
@@ -615,6 +727,62 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                         return false;
                     }
                     return true;
+                }
+                break;
+
+            case INST_DUP:
+                {
+                    // enif_fprintf(stdout, "inst: dup\n");
+                    if(__builtin_expect(stack_idx == 0, false)) {
+                        *reason = enif_make_string(env, "stack should be greater than zero in case of dup", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    stack[stack_idx].type = stack[stack_idx - 1].type;
+                    stack[stack_idx].content = stack[stack_idx - 1].content;
+                    stack_idx++;
+                }
+                break;
+
+            case INST_POP:
+                {
+                    // enif_fprintf(stdout, "inst: pop\n");
+                    if(__builtin_expect(stack_idx == 0, false)) {
+                        *reason = enif_make_string(env, "stack should be greater than zero in case of pop", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    stack_idx--;
+                    stack[stack_idx].type = type_undefined;
+                }
+                break;
+
+            case INST_POP2:
+                {
+                    // enif_fprintf(stdout, "inst: pop2\n");
+                    if(__builtin_expect(stack_idx <= 1, false)) {
+                        *reason = enif_make_string(env, "stack should be greater than one in case of pop2", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    stack_idx -= 2;
+                    stack[stack_idx + 1].type = type_undefined;
+                    stack[stack_idx].type = type_undefined;
+                }
+                break;
+
+            case INST_SWAP:
+                {
+                    // enif_fprintf(stdout, "inst: swap\n");
+                    if(__builtin_expect(stack_idx <= 1, false)) {
+                        *reason = enif_make_string(env, "stack should be greater than one in case of swap", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    enum stack_type t;
+                    ERL_NIF_TERM term;
+                    t = stack[stack_idx - 1].type;
+                    stack[stack_idx - 1].type = stack[stack_idx - 2].type;
+                    stack[stack_idx - 2].type = t;
+                    term = stack[stack_idx - 1].content;
+                    stack[stack_idx - 1].content = stack[stack_idx - 2].content;
+                    stack[stack_idx - 2].content = term;
                 }
                 break;
 

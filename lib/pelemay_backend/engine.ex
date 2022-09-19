@@ -37,7 +37,12 @@ defmodule PelemayBackend.Engine do
       sendt: 0x8001,
       return: 0x8002,
       skip: 0x8003,
-      is_scalar: 0x8004
+      is_scalar: 0x8004,
+      dup: 0x8005,
+      pop: 0x8006,
+      pop2: 0x8007,
+      swap: 0x8008,
+      sende: 0x8009
     }
   end
 
@@ -162,6 +167,7 @@ defmodule PelemayBackend.Engine do
     enum stack_type {
       type_undefined,
       type_tensor,
+      type_scalar,
       type_error,
       type_bool,
     };
@@ -260,11 +266,7 @@ defmodule PelemayBackend.Engine do
 
     code = {
       Map.get(instruction_code(), :scal),
-      {
-        Nx.type(args),
-        Nx.to_binary(args),
-        1
-      }
+      args
     }
 
     # Logger.debug("generated code of scal: #{inspect(code)}")
@@ -336,6 +338,19 @@ defmodule PelemayBackend.Engine do
     code
   end
 
+  defp encode(:sende, args, _binding) do
+    # Logger.debug("sende #{inspect(args)}")
+
+    code = {
+      Map.get(instruction_code(), :sende),
+      args
+    }
+
+    # Logger.debug("generated code of sendt: #{inspect(code)}")
+
+    code
+  end
+
   defp encode(:return, _args, _binding) do
     code = {
       Map.get(instruction_code(), :return),
@@ -354,10 +369,46 @@ defmodule PelemayBackend.Engine do
     code
   end
 
-  defp encode(:is_scalar, args, _binding) do
+  defp encode(:is_scalar, _args, _binding) do
     code = {
       Map.get(instruction_code(), :is_scalar),
-      Nx.size(args)
+      nil
+    }
+
+    code
+  end
+
+  defp encode(:dup, _args, _binding) do
+    code = {
+      Map.get(instruction_code(), :dup),
+      nil
+    }
+
+    code
+  end
+
+  defp encode(:pop, _args, _binding) do
+    code = {
+      Map.get(instruction_code(), :pop),
+      nil
+    }
+
+    code
+  end
+
+  defp encode(:pop2, _args, _binding) do
+    code = {
+      Map.get(instruction_code(), :pop2),
+      nil
+    }
+
+    code
+  end
+
+  defp encode(:swap, _args, _binding) do
+    code = {
+      Map.get(instruction_code(), :swap),
+      nil
     }
 
     code

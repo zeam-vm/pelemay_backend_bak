@@ -22,6 +22,10 @@ defmodule PelemayBackend.BackendTest do
 
     assert Nx.multiply(4.0, Nx.tensor([3.0, 4.0, 5.0], type: {:f, 64})) ==
              Nx.tensor([12.0, 16.0, 20.0], type: {:f, 64})
+
+    assert_raise RuntimeError, fn ->
+      Nx.multiply(Nx.tensor([1.0, 2.0]), Nx.tensor([2.0, 4.0]))
+    end
   end
 
   @precision_error_doctests [

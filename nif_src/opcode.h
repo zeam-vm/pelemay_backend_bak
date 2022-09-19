@@ -21,12 +21,18 @@ enum instruction {
     INST_RETURN = 0x8002,
     INST_SKIP = 0x8003,
     INST_IS_SCALAR = 0x8004,
+    INST_DUP = 0x8005,
+    INST_POP = 0x8006,
+    INST_POP2 = 0x8007,
+    INST_SWAP = 0x8008,
+    INST_SENDE = 0x8009,
 };
 
 
 enum stack_type {
   type_undefined,
   type_tensor,
+  type_scalar,
   type_error,
   type_bool,
 };
