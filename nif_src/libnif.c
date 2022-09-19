@@ -425,7 +425,7 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                     const ERL_NIF_TERM *array_type;
                     char *type;
                     unsigned typel;
-                    unsigned int type_size;
+                    // unsigned int type_size;
                     if(__builtin_expect(
                         !enif_get_tuple(env, array[2], &arity_type, &array_type)
                         || arity_type != 2
@@ -467,6 +467,157 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                 }
                 break;
 
+            case INST_IS_SCALAR:
+                {
+                    // enif_fprintf(stdout, "inst: is_scalar\n");
+
+                    ErlNifUInt64 size;
+                    if(__builtin_expect(!enif_get_uint64(env, code_p->operand, &size), false)) {
+                        *reason = enif_make_string(env, "Fail to get uint64 in case is_scalar", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    stack[stack_idx].type = type_bool;
+                    if(size == 1) {
+                        stack[stack_idx].content = enif_make_uint(env, 1);
+                    } else {
+                        stack[stack_idx].content = enif_make_uint(env, 0);
+                    }
+                    stack_idx++;
+                }
+                break;
+
+            case INST_SKIP:
+                {
+                    // enif_fprintf(stdout, "inst: skip\n");
+
+                    /*
+                     * Skips in the given condition by the operand.
+                     * 
+                     * The operand should be a tuple as follows:
+                     * {
+                     *   (a non positive number increment of PC),
+                     *   {
+                     *     :if,
+                     *     true or false
+                     *   }
+                     * }
+                     * or 
+                     * {
+                     *   (a non positive number increment of PC),
+                     *   true
+                     * }
+                     *
+                     * If the former, Pops the stack as the condition.
+                     * The type of the poped value should be type_bool. 
+                     */
+
+                    int arity;
+                    const ERL_NIF_TERM *array;
+                    if(__builtin_expect(
+                        !enif_get_tuple(env, code_p->operand, &arity, &array)
+                        || arity != 2,
+                        false)) {
+                        *reason = enif_make_string(env, "Fail to get tuple2 from the operand in case of skip", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    ErlNifUInt64 skip;
+                    if(__builtin_expect(!enif_get_uint64(env, array[0], &skip), false)) {
+                        *reason = enif_make_string(env, "Fail to get uint64 from the increment of PC in case of skip", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    ERL_NIF_TERM value = array[1];
+                    if(enif_is_atom(env, value)) {
+                        // case of unconditional branch
+                        unsigned len;
+                        char *buf;
+                        if(__builtin_expect(
+                            !enif_get_atom_length(env, value, &len, ERL_NIF_LATIN1)
+                            || (buf = enif_alloc(len + 1)) == NULL
+                            || !enif_get_atom(env, value, buf, len + 1, ERL_NIF_LATIN1)
+                            || strncmp(buf, "true", len + 1) != 0,
+                            false)) {
+                            *reason = enif_make_string(env, "The conditional value should be true in case of unconditional branch", ERL_NIF_LATIN1);
+                            return false;
+                        }
+                        code_p += skip;
+                        code_length -= skip;
+                    } else if(__builtin_expect(enif_is_tuple(env, value), true)) {
+                        // case of conditional branch
+                        if(__builtin_expect(
+                            !enif_get_tuple(env, value, &arity, &array)
+                            || arity != 2, false)) {
+                            *reason = enif_make_string(env, "The conditional value should be tuple2 in case of conditional branch", ERL_NIF_LATIN1);
+                            return false;
+                        }
+                        unsigned len;
+                        char *buf;
+                        if(__builtin_expect(
+                            !enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1)
+                            || (buf = enif_alloc(len + 1)) == NULL
+                            || !enif_get_atom(env, array[0], buf, len + 1, ERL_NIF_LATIN1)
+                            || strncmp(buf, "if", len + 1) != 0,
+                            false)) {
+                            *reason = enif_make_string(env, "The conditional value should be :if in case of conditional branch", ERL_NIF_LATIN1);
+                            return false;
+                        }
+                        int cmp_true, cmp_false;
+                        if(__builtin_expect(
+                            !enif_get_atom_length(env, array[1], &len, ERL_NIF_LATIN1)
+                            || (buf = enif_alloc(len + 1)) == NULL
+                            || !enif_get_atom(env, array[1], buf, len + 1, ERL_NIF_LATIN1)
+                            || !((cmp_true = strncmp(buf, "true", len + 1)) == 0 
+                                || (cmp_false = strncmp(buf, "false", len + 1)) == 0),
+                            false)) {
+                            *reason = enif_make_string(env, "The conditional value should be true or false in case of conditional branch", ERL_NIF_LATIN1);
+                            return false;
+                        }
+                        if(__builtin_expect(stack_idx == 0, false)) {
+                            *reason = enif_make_string(env, "Stack limit is less than 0", ERL_NIF_LATIN1);
+                            return false;
+                        }
+                        stack_idx--;
+                        ErlNifUInt bool_branch = 0xff;
+                        if(__builtin_expect(
+                            stack[stack_idx].type != type_bool
+                            || !enif_get_uint(env, stack[stack_idx].content, &bool_branch)
+                            || !(bool_branch == 0 || bool_branch == 1), 
+                            false)) {
+                            *reason = enif_make_string(env, "The stack top should be type_bool in case of conditional branch", ERL_NIF_LATIN1);
+                            return false;
+                        }
+                        if(cmp_true == 0) {
+                            if(bool_branch == 1) {
+                                code_p += skip;
+                                code_length -= skip;
+                            }
+                        } else if(cmp_false == 0) {
+                            if(bool_branch == 0) {
+                                code_p += skip;
+                                code_length -= skip;
+                            }
+                        } else {
+                            *reason = enif_make_string(env, "unexpected case", ERL_NIF_LATIN1);
+                            return false;
+                        }
+                    } else {
+                        *reason = enif_make_string(env, "Unrecognized format of the branch condition in case of skip", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                }
+                break;
+
+            case INST_RETURN:
+                {
+                    // enif_fprintf(stdout, "inst: return\n");
+                    // enif_fprintf(stdout, "stack_idx: %u\n", stack_idx);
+                    if(__builtin_expect(stack_idx != 0, false)) {
+                        *reason = enif_make_string(env, "stack is not zero at the end of code", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    return true;
+                }
+                break;
+
             default:
                 {
                     const char *err = "unrecognized instruction %04X";
@@ -481,6 +632,11 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
             *reason = enif_make_string(env, "stack limit is over MAX_STACK", ERL_NIF_LATIN1);
             return false;
         }
+    }
+    // enif_fprintf(stdout, "stack_idx: %u\n", stack_idx);
+    if(__builtin_expect(stack_idx != 0, false)) {
+        *reason = enif_make_string(env, "stack is not zero at the end of code", ERL_NIF_LATIN1);
+        return false;
     }
     return true;
 }

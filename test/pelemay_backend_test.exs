@@ -7,6 +7,8 @@ defmodule PelemayBackendTest do
   test "multiply scalar and vector(1000)" do
     input = Nx.iota({1000}, type: {:f, 32})
     fun = &Nx.multiply(&1, &2)
-    assert fun.(2.0, input) == PelemayBackend.jit_apply(fun, [2.0, input])
+    result = fun.(2.0, input)
+    assert result == PelemayBackend.jit_apply(fun, [2.0, input])
+    assert result == PelemayBackend.jit_apply(fun, [input, 2.0])
   end
 end

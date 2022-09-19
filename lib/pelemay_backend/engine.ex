@@ -34,7 +34,10 @@ defmodule PelemayBackend.Engine do
       gemv: 0x1000,
       gemm: 0x2000,
       pusht: 0x8000,
-      sendt: 0x8001
+      sendt: 0x8001,
+      return: 0x8002,
+      skip: 0x8003,
+      is_scalar: 0x8004
     }
   end
 
@@ -160,6 +163,7 @@ defmodule PelemayBackend.Engine do
       type_undefined,
       type_tensor,
       type_error,
+      type_bool,
     };
 
     enum type_binary {
@@ -328,6 +332,33 @@ defmodule PelemayBackend.Engine do
     }
 
     # Logger.debug("generated code of sendt: #{inspect(code)}")
+
+    code
+  end
+
+  defp encode(:return, _args, _binding) do
+    code = {
+      Map.get(instruction_code(), :return),
+      nil
+    }
+
+    code
+  end
+
+  defp encode(:skip, args, _binding) do
+    code = {
+      Map.get(instruction_code(), :skip),
+      args
+    }
+
+    code
+  end
+
+  defp encode(:is_scalar, args, _binding) do
+    code = {
+      Map.get(instruction_code(), :is_scalar),
+      Nx.size(args)
+    }
 
     code
   end

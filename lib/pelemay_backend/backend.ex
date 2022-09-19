@@ -257,7 +257,7 @@ defmodule PelemayBackend.Backend do
 
     for {name, args, tensor_args} <- callbacks do
         args = Enum.map(args, &Macro.var(&1, __MODULE__))
-        tensor_args = Enum.map(tensor_args, &Macro.var(&1, __MODULE__))
+        _tensor_args = Enum.map(tensor_args, &Macro.var(&1, __MODULE__))
 
         @impl true
         defdelegate unquote(name)(out, unquote_splicing(args)), to: Nx.BinaryBackend
