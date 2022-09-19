@@ -11,6 +11,9 @@ defmodule PelemayBackend.BackendTest do
     assert Nx.multiply(2.0, Nx.tensor([1.0, 2.0], type: {:f, 32})) ==
              Nx.tensor([2.0, 4.0], type: {:f, 32})
 
+    assert Nx.multiply(Nx.tensor([1.0, 2.0], type: {:f, 32}), 2.0) ==
+             Nx.tensor([2.0, 4.0], type: {:f, 32})
+
     assert Nx.multiply(4.0, Nx.tensor([3.0, 4.0, 5.0], type: {:f, 32})) ==
              Nx.tensor([12.0, 16.0, 20.0], type: {:f, 32})
 
