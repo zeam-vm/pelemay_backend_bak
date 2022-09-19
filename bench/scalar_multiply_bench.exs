@@ -16,8 +16,11 @@ Benchee.run(
     "Pelemay Backend" => fn input -> pelemay.(2.0, input) end
   },
   inputs: %{
-    "1_000" => Nx.iota({1_000}, type: {:f, 32}),
-    "10_000" => Nx.iota({10_000}, type: {:f, 32}),
-    "100_000" => Nx.iota({100_000}, type: {:f, 32})
+    "f32 1_000" => Nx.iota({1_000}, type: {:f, 32}),
+    "f32 10_000" => Nx.iota({10_000}, type: {:f, 32}),
+    "f32 100_000" => Nx.iota({100_000}, type: {:f, 32}),
+    "f64 1_000" => Nx.iota({1_000}, type: {:f, 64}),
+    "f64 10_000" => Nx.iota({10_000}, type: {:f, 64}),
+    "f64 100_000" => Nx.iota({100_000}, type: {:f, 64})
   }
 )
