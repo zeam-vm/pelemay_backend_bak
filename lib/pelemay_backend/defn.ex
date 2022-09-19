@@ -34,6 +34,7 @@ defmodule PelemayBackend.Defn do
       skip {3, {:if, true}}
       sende {self(), ~c'multiply with two vectors is not supported.'}
       pop2
+      pop2
       return
       scal 1
       sendt self()
