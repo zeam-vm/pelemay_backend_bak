@@ -11,7 +11,7 @@ ifeq ($(shell uname -s),Linux)
 LDFLAGS += -fPIC -shared
 CFLAGS += -fPIC
 else # macOS
-LDFLAGS += -undefined dynamic_lookup -dynamiclib
+LDFLAGS += -undefined dynamic_lookup -dynamiclib -Wl,-w
 endif
 else
 LDFLAGS += -fPIC -shared
