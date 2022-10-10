@@ -14,38 +14,38 @@ defmodule PelemayBackend.Defn do
 
   @doc false
   def __compile__(_key, _vars, _fun, options) do
-    #Logger.debug(
+    # Logger.debug(
     #  "__compile__(key: #{inspect(key)}, vars: #{inspect(vars)}, fun: #{inspect(fun)}, options: #{inspect(options)})"
-    #)
+    # )
 
-    #Logger.debug("fun #{inspect(fun)}(#{inspect(vars)}): #{inspect(fun.(vars))}")
+    # Logger.debug("fun #{inspect(fun)}(#{inspect(vars)}): #{inspect(fun.(vars))}")
 
     {_run_options, _compile_options} = Keyword.pop(options, :run_options, [])
 
     fn [args] ->
       code =
-      """
-      pusht Enum.at(args, 0)
-      copy
-      is_scalar
-      skip {10, {:if, true}}
-      pusht Enum.at(args, 1)
-      is_scalar
-      skip {4, {:if, true}}
-      sende {self(), ~c'multiply with two vectors is not supported.'}
-      pop2
-      pop2
-      return
-      scal 1
-      sendt self()
-      return
-      pusht Enum.at(args, 1)
-      copy
-      swap
-      scal 1
-      sendt self()
-      """
-      |> PelemayBackend.Engine.assemble(args: args)
+        """
+        pusht Enum.at(args, 0)
+        copy
+        is_scalar
+        skip {10, {:if, true}}
+        pusht Enum.at(args, 1)
+        is_scalar
+        skip {4, {:if, true}}
+        sende {self(), ~c'multiply with two vectors is not supported.'}
+        pop2
+        pop2
+        return
+        scal 1
+        sendt self()
+        return
+        pusht Enum.at(args, 1)
+        copy
+        swap
+        scal 1
+        sendt self()
+        """
+        |> PelemayBackend.Engine.assemble(args: args)
 
       try do
         case PelemayBackend.Engine.execute(code) do

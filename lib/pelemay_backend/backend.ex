@@ -185,8 +185,8 @@ defmodule PelemayBackend.Backend do
     jit(wrapper_fun, [List.to_tuple(tensors)])
   end
 
+  # [:add, :subtract, :multiply, :power, :remainder, :divide, :atan2, :min, :max, :quotient] ++
   binary_ops =
-    # [:add, :subtract, :multiply, :power, :remainder, :divide, :atan2, :min, :max, :quotient] ++
     [:add, :subtract, :power, :remainder, :divide, :atan2, :min, :max, :quotient] ++
       [:bitwise_and, :bitwise_or, :bitwise_xor, :left_shift, :right_shift] ++
       [:equal, :not_equal, :greater, :less, :greater_equal, :less_equal] ++
@@ -255,14 +255,13 @@ defmodule PelemayBackend.Backend do
       for(op <- binary_ops, do: {op, [:left, :right], [:left, :right]}) ++
       for(op <- unary_ops, do: {op, [:tensor], [:tensor]})
 
-    for {name, args, tensor_args} <- callbacks do
-        args = Enum.map(args, &Macro.var(&1, __MODULE__))
-        _tensor_args = Enum.map(tensor_args, &Macro.var(&1, __MODULE__))
+  for {name, args, tensor_args} <- callbacks do
+    args = Enum.map(args, &Macro.var(&1, __MODULE__))
+    _tensor_args = Enum.map(tensor_args, &Macro.var(&1, __MODULE__))
 
-        @impl true
-        defdelegate unquote(name)(out, unquote_splicing(args)), to: Nx.BinaryBackend
-      end
-
+    @impl true
+    defdelegate unquote(name)(out, unquote_splicing(args)), to: Nx.BinaryBackend
+  end
 
   binary_ops = [:multiply]
 

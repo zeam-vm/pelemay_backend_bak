@@ -221,7 +221,7 @@ defmodule PelemayBackend.BackendTest do
     # window_product: 3,
     # window_reduce: 5,
     window_scatter_max: 5,
-    window_scatter_min: 5,
+    window_scatter_min: 5
     # window_sum: 3
   ]
 
