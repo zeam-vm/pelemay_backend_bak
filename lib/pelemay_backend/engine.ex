@@ -33,7 +33,7 @@ defmodule PelemayBackend.Engine do
       axpy: 0x0004,
       gemv: 0x1000,
       gemm: 0x2000,
-      pusht: 0x8000,
+      aloadt: 0x8000,
       sendt: 0x8001,
       return: 0x8002,
       skip: 0x8003,
@@ -214,9 +214,9 @@ defmodule PelemayBackend.Engine do
 
   The code should be a list of tuples of an opcode and an operand.
   """
-  @spec execute(list({opcode(), operand()})) :: :ok | {:error, String.t()}
-  def execute(code) do
-    PelemayBackend.NIF.execute_engine(code)
+  @spec execute(list({opcode(), operand()}), list(), pid()) :: :ok | {:error, String.t()}
+  def execute(code, args, pid) do
+    PelemayBackend.NIF.execute_engine(code, args, pid)
   end
 
   @doc """
@@ -234,9 +234,10 @@ defmodule PelemayBackend.Engine do
   @doc """
   Assemble code into
   """
-  @spec assemble(String.t(), Code.binding()) :: list({opcode(), operand()})
-  def assemble(code, binding \\ []) do
+  @spec assemble(String.t()) :: list({opcode(), operand()})
+  def assemble(code) do
     r = regex_inst()
+    binding = []
 
     String.split(code, "\n")
     |> Stream.reject(&(&1 == ""))
@@ -307,46 +308,20 @@ defmodule PelemayBackend.Engine do
     # Logger.debug("gemm")
   end
 
-  defp encode(:pusht, args, _binding) do
-    # Logger.debug("pusht #{inspect(args)}")
-
-    code = {
-      Map.get(instruction_code(), :pusht),
-      {
-        Nx.size(args),
-        Nx.shape(args),
-        Nx.type(args),
-        Nx.to_binary(args)
-      }
-    }
-
-    # Logger.debug("generated code of pusht: #{inspect(code)}")
-
-    code
-  end
-
-  defp encode(:sendt, args, _binding) do
-    # Logger.debug("sendt #{inspect(args)}")
-
+  defp encode(:sendt, _args, _binding) do
     code = {
       Map.get(instruction_code(), :sendt),
-      args
+      nil
     }
-
-    # Logger.debug("generated code of sendt: #{inspect(code)}")
 
     code
   end
 
   defp encode(:sende, args, _binding) do
-    # Logger.debug("sende #{inspect(args)}")
-
     code = {
       Map.get(instruction_code(), :sende),
       args
     }
-
-    # Logger.debug("generated code of sendt: #{inspect(code)}")
 
     code
   end
@@ -409,6 +384,15 @@ defmodule PelemayBackend.Engine do
     code = {
       Map.get(instruction_code(), :swap),
       nil
+    }
+
+    code
+  end
+
+  defp encode(:aloadt, args, _binding) do
+    code = {
+      Map.get(instruction_code(), :aloadt),
+      args
     }
 
     code

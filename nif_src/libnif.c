@@ -23,6 +23,17 @@ typedef struct p_stack {
     ERL_NIF_TERM content;
 } p_stack_t;
 
+unsigned int get_degit(ErlNifUInt64 n)
+{
+    unsigned int digit = 1;
+
+    while(n /= 10) {
+        ++digit;
+    }
+
+    return digit;
+}
+
 bool getcode(ErlNifEnv *env, ERL_NIF_TERM list, code_t **code, unsigned *length, ERL_NIF_TERM *exception)
 {
     if(__builtin_expect(!enif_get_list_length(env, list, length), false)) {
@@ -64,7 +75,7 @@ bool getcode(ErlNifEnv *env, ERL_NIF_TERM list, code_t **code, unsigned *length,
     return true;
 }
 
-bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *reason)
+bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *args, unsigned arg_length, ERL_NIF_TERM rpid, ERL_NIF_TERM *reason)
 {
     p_stack_t stack[MAX_STACK];
 
@@ -83,39 +94,6 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
 
         // enif_fprintf(stdout, "instruction: %04X\n", inst);
         switch(inst) {
-            case INST_PUSHT:
-                {
-                    // enif_fprintf(stdout, "inst: pusht\n");
-
-                    /*
-                     * Push the operand to the stack.
-                     *
-                     * The operand should be:
-                     * {
-                     *   Nx.size(args),
-                     *   Nx.shape(args),
-                     *   Nx.type(args),
-                     *   Nx.to_binary(args)
-                     * }
-                     */
-
-                    // check operand only whether it is tuple4 or not.
-                    int arity;
-                    const ERL_NIF_TERM *array;
-                    if(__builtin_expect(!enif_get_tuple(env, code_p->operand, &arity, &array), false)) {
-                        *reason = enif_make_string(env, "Operand should be a tuple in case of pusht", ERL_NIF_LATIN1);
-                        return false;
-                    }
-                    if(__builtin_expect(arity != 4, false)) {
-                        *reason = enif_make_string(env, "The arity of tuple should be 4 in case of pusht", ERL_NIF_LATIN1);
-                        return false;
-                    }
-                    stack[stack_idx].type = type_tensor;
-                    stack[stack_idx].content = code_p->operand;
-                    stack_idx++;
-                }
-                break;
-
             case INST_COPY:
                 {
                     // enif_fprintf(stdout, "inst: copy\n");
@@ -404,8 +382,6 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                     /*
                      * Sends a tensor to the process.
                      * 
-                     * The operand should be pid.
-                     * 
                      * The stak top should be type_tensor:
                      * {
                      *   Nx.size(args),
@@ -483,8 +459,8 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                     }
 
                     ErlNifPid pid;
-                    if(__builtin_expect(!enif_get_local_pid(env, code_p->operand, &pid), false)) {
-                        *reason = enif_make_string(env, "Fail to get pid from operand in case sendt", ERL_NIF_LATIN1);
+                    if(__builtin_expect(!enif_get_local_pid(env, rpid, &pid), false)) {
+                        *reason = enif_make_string(env, "Fail to get pid in case sendt", ERL_NIF_LATIN1);
                         return false;
                     }
 
@@ -515,11 +491,8 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                      * Sends an error.
                      * 
                      * The operand should be as follows:
-                     * {
-                     *   pid,
-                     *   Charlist
-                     * }
-                     *                      *
+                     * Charlist
+                     *
                      * The sent message in case of type_tensor is:
                      * 
                      * The sent message in case of type_error is:
@@ -530,19 +503,8 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                      * 
                      */
 
-                    int arity;
-                    const ERL_NIF_TERM *array;
-                    if(__builtin_expect(!enif_get_tuple(env, code_p->operand, &arity, &array), false)) {
-                        *reason = enif_make_string(env, "Operand should be a tuple in case of sende", ERL_NIF_LATIN1);
-                        return false;
-                    }
-                    if(__builtin_expect(arity != 2, false)) {
-                        *reason = enif_make_string(env, "The arity of tuple should be 2 in case of sende", ERL_NIF_LATIN1);
-                        return false;
-                    }
-
                     ErlNifPid pid;
-                    if(__builtin_expect(!enif_get_local_pid(env, array[0], &pid), false)) {
+                    if(__builtin_expect(!enif_get_local_pid(env, rpid, &pid), false)) {
                         *reason = enif_make_string(env, "Fail to get pid from operand in case sende", ERL_NIF_LATIN1);
                         return false;
                     }
@@ -554,7 +516,7 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                     }
                     ERL_NIF_TERM message = enif_make_tuple2(env,
                         enif_make_atom(env, "error"),
-                        array[1]
+                        code_p->operand
                     );
 
                     if(__builtin_expect(!enif_send(NULL, &pid, msg_env, message), false)) {
@@ -786,6 +748,36 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
                 }
                 break;
 
+            case INST_ALOADT:
+                {
+                    ErlNifUInt64 local_variable_num;
+                    if(__builtin_expect(!enif_get_uint64(env, code_p->operand, &local_variable_num), false)) {
+                        *reason = enif_make_string(env, "the operand of aloadt should be unsigned integer", ERL_NIF_LATIN1);
+                        return false;
+                    }
+
+                    // check the local variable only whether it is tuple4 or not.
+                    int arity;
+                    const ERL_NIF_TERM *array;
+                    if(__builtin_expect(!enif_get_tuple(env, args[local_variable_num], &arity, &array), false)) {
+                        const char *error_message = "the local variable %lu should be a tuple in case of aloadt";
+                        size_t error_buf_len = strlen(error_message) - 3 + get_degit(UINT64_MAX);
+                        char *error_buf = enif_alloc(error_buf_len);
+                        enif_snprintf(error_buf, error_buf_len, error_message, local_variable_num);
+                        *reason = enif_make_string(env, error_buf, ERL_NIF_LATIN1);
+                        enif_free(error_buf);
+                        return false;
+                    }
+                    if(__builtin_expect(arity != 4, false)) {
+                        *reason = enif_make_string(env, "The arity of tuple should be 4 in case of aloadt", ERL_NIF_LATIN1);
+                        return false;
+                    }
+                    stack[stack_idx].type = type_tensor;
+                    stack[stack_idx].content = args[local_variable_num];
+                    stack_idx++;
+                }
+                break;
+
             default:
                 {
                     const char *err = "unrecognized instruction %04X";
@@ -811,7 +803,7 @@ bool execute(ErlNifEnv *env, code_t *code, unsigned code_length, ERL_NIF_TERM *r
 
 static ERL_NIF_TERM execute_engine(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    if(__builtin_expect(argc != 1, false)) {
+    if(__builtin_expect(argc != 3, false)) {
         return enif_make_badarg(env);
     }
     unsigned length;
@@ -821,8 +813,21 @@ static ERL_NIF_TERM execute_engine(ErlNifEnv *env, int argc, const ERL_NIF_TERM 
     if(__builtin_expect(!getcode(env, argv[0], &code, &length, &exception), false)) {
         return exception;
     }
+
+    unsigned arg_length;
+    if(__builtin_expect(!enif_get_list_length(env, argv[1], &arg_length), false)) {
+        return enif_make_badarg(env);
+    }
+    ERL_NIF_TERM *args = enif_alloc(sizeof(ERL_NIF_TERM) * arg_length);
+    ERL_NIF_TERM tail = argv[1];
+    for(unsigned i = 0; i < arg_length; i++) {
+        if(__builtin_expect(!enif_get_list_cell(env, tail, &args[i], &tail), false)) {
+            return enif_make_badarg(env);
+        }
+    }
+
     ERL_NIF_TERM reason;
-    if(execute(env, code, length, &reason)) {
+    if(execute(env, code, length, args, arg_length, argv[2], &reason)) {
         enif_free(code);
         return enif_make_atom(env, "ok");
     } else {
@@ -833,7 +838,7 @@ static ERL_NIF_TERM execute_engine(ErlNifEnv *env, int argc, const ERL_NIF_TERM 
 
 static ErlNifFunc nif_funcs [] =
 {
-    {"execute_engine", 1, execute_engine}
+    {"execute_engine", 3, execute_engine}
 };
 
 ERL_NIF_INIT(Elixir.PelemayBackend.NIF, nif_funcs, NULL, NULL, NULL, NULL)

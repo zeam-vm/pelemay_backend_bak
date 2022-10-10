@@ -22,33 +22,49 @@ defmodule PelemayBackend.Defn do
 
     {_run_options, _compile_options} = Keyword.pop(options, :run_options, [])
 
+    code =
+      """
+      aloadt 0
+      copy
+      is_scalar
+      skip {10, {:if, true}}
+      aloadt 1
+      is_scalar
+      skip {4, {:if, true}}
+      sende ~c'multiply with two vectors is not supported.'
+      pop2
+      pop2
+      return
+      scal 1
+      sendt
+      return
+      aloadt 1
+      copy
+      swap
+      scal 1
+      sendt
+      """
+      |> PelemayBackend.Engine.assemble()
+
     fn [args] ->
-      code =
-        """
-        pusht Enum.at(args, 0)
-        copy
-        is_scalar
-        skip {10, {:if, true}}
-        pusht Enum.at(args, 1)
-        is_scalar
-        skip {4, {:if, true}}
-        sende {self(), ~c'multiply with two vectors is not supported.'}
-        pop2
-        pop2
-        return
-        scal 1
-        sendt self()
-        return
-        pusht Enum.at(args, 1)
-        copy
-        swap
-        scal 1
-        sendt self()
-        """
-        |> PelemayBackend.Engine.assemble(args: args)
+      args =
+        Enum.map(args, fn a ->
+          cond do
+            is_struct(a, Nx.Tensor) ->
+              {
+                Nx.size(a),
+                Nx.shape(a),
+                Nx.type(a),
+                Nx.to_binary(a)
+              }
+
+            true ->
+              a
+          end
+        end)
 
       try do
-        case PelemayBackend.Engine.execute(code) do
+        case PelemayBackend.Engine.execute(code, args, self()) do
           :ok -> :ok
           {:error, reason} -> raise RuntimeError, message: List.to_string(reason)
         end
