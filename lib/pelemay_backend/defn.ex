@@ -31,7 +31,7 @@ defmodule PelemayBackend.Defn do
       aloadt 1
       is_scalar
       skip {4, {:if, true}}
-      sende ~c'multiply with two vectors is not supported.'
+      sende 'multiply with two vectors is not supported.'
       pop2
       pop2
       return
