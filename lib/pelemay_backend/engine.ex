@@ -246,15 +246,15 @@ defmodule PelemayBackend.Engine do
     |> Enum.reduce([], fn map, acc ->
       inst = Map.keys(map) |> hd()
 
-    args =
-      Map.get(map, inst, "")
-      |> String.replace_prefix(inst, "")
-      |> PelemayBackend.Parser.parse_constant()
-      |> case do
-        {:ok, value, _, _, _, _} -> value
-        {:error, _, _, _, _, _} -> [:error]
-      end
-      |> evaluate()
+      args =
+        Map.get(map, inst, "")
+        |> String.replace_prefix(inst, "")
+        |> PelemayBackend.Parser.parse_constant()
+        |> case do
+          {:ok, value, _, _, _, _} -> value
+          {:error, _, _, _, _, _} -> [:error]
+        end
+        |> evaluate()
 
       inst = String.to_atom(inst)
       acc ++ [{inst, args}]
@@ -269,13 +269,13 @@ defmodule PelemayBackend.Engine do
 
   defp evaluate([:error]), do: []
 
-  defp evaluate([integer: [value]]), do: value
+  defp evaluate(integer: [value]), do: value
 
-  defp evaluate([string: [value]]), do: String.to_charlist(value)
+  defp evaluate(string: [value]), do: String.to_charlist(value)
 
-  defp evaluate([atom: [value]]), do: String.to_atom(value)
+  defp evaluate(atom: [value]), do: String.to_atom(value)
 
-  defp evaluate([tuple: list]), do: list |> Enum.map(&evaluate([&1])) |> List.to_tuple()
+  defp evaluate(tuple: list), do: list |> Enum.map(&evaluate([&1])) |> List.to_tuple()
 
   defp encode(:scal, args) do
     # Logger.debug("scal #{inspect(args)}")
