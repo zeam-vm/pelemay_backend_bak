@@ -16,7 +16,7 @@ enum instruction {
     INST_AXPY = 0x4,
     INST_GEMV = 0x1000,
     INST_GEMM = 0x2000,
-    INST_PUSHT = 0x8000,
+    INST_ALOADT = 0x8000,
     INST_SENDT = 0x8001,
     INST_RETURN = 0x8002,
     INST_SKIP = 0x8003,

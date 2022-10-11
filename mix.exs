@@ -35,7 +35,8 @@ defmodule PelemayBackend.MixProject do
       {:nx, "~> 0.3.0"},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:openblas_builder, "~> 0.1.0-dev", github: "zeam-vm/openblas_builder", branch: "main"},
-      {:elixir_make, "~> 0.6", runtime: false}
+      {:elixir_make, "~> 0.6", runtime: false},
+      {:nimble_parsec, "~> 1.2"}
     ]
   end
 

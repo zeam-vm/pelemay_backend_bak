@@ -17,5 +17,5 @@ defmodule PelemayBackend.NIF do
     end
   end
 
-  def execute_engine(_code), do: :erlang.nif_error(:not_loaded)
+  def execute_engine(_code, _args, _pid), do: :erlang.nif_error(:not_loaded)
 end
