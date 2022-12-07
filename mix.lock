@@ -1,7 +1,7 @@
 %{
   "complex": {:hex, :complex, "0.4.2", "923e5db0be13dbb3ea00cf8459d9f75f3afdd9ff5a82742ded21064330d28273", [:mix], [], "hexpm", "069a085ef820ce675a2619fd125b963ff4514af2102c7f7d7965128e5ec0a429"},
   "earmark_parser": {:hex, :earmark_parser, "1.4.29", "149d50dcb3a93d9f3d6f3ecf18c918fb5a2d3c001b5d3305c926cddfbd33355b", [:mix], [], "hexpm", "4902af1b3eb139016aed210888748db8070b8125c2342ce3dcae4f38dcc63503"},
-  "elixir_make": {:hex, :elixir_make, "0.6.3", "bc07d53221216838d79e03a8019d0839786703129599e9619f4ab74c8c096eac", [:mix], [], "hexpm", "f5cbd651c5678bcaabdbb7857658ee106b12509cd976c2c2fca99688e1daf716"},
+  "elixir_make": {:hex, :elixir_make, "0.7.0", "03e6a43ac701a2afee73bb5dd030b4dcddcb403bf81abb4753c1da64521cd05d", [:mix], [{:castore, "~> 0.1", [hex: :castore, repo: "hexpm", optional: true]}], "hexpm", "b1ccb45cc1c5df16349473b52adbd718f362585a5481d761b8a9fdb45f25b303"},
   "ex_doc": {:hex, :ex_doc, "0.29.1", "b1c652fa5f92ee9cf15c75271168027f92039b3877094290a75abcaac82a9f77", [:mix], [{:earmark_parser, "~> 1.4.19", [hex: :earmark_parser, repo: "hexpm", optional: false]}, {:makeup_elixir, "~> 0.14", [hex: :makeup_elixir, repo: "hexpm", optional: false]}, {:makeup_erlang, "~> 0.1", [hex: :makeup_erlang, repo: "hexpm", optional: false]}], "hexpm", "b7745fa6374a36daf484e2a2012274950e084815b936b1319aeebcf7809574f6"},
   "flow": {:hex, :flow, "1.2.0", "515e03aa3d056cecc3e3f1e80f6ca4bbf5f45b13c88dee5db880b2f3f24f1caa", [:mix], [{:gen_stage, "~> 1.0", [hex: :gen_stage, repo: "hexpm", optional: false]}], "hexpm", "1b45bfc8a9202c5ec80b077c21df133561e56c56189ba4082dddccb6b5762525"},
   "gen_stage": {:hex, :gen_stage, "1.1.2", "b1656cd4ba431ed02c5656fe10cb5423820847113a07218da68eae5d6a260c23", [:mix], [], "hexpm", "9e39af23140f704e2b07a3e29d8f05fd21c2aaf4088ff43cb82be4b9e3148d02"},
@@ -10,5 +10,5 @@
   "makeup_erlang": {:hex, :makeup_erlang, "0.1.1", "3fcb7f09eb9d98dc4d208f49cc955a34218fc41ff6b84df7c75b3e6e533cc65f", [:mix], [{:makeup, "~> 1.0", [hex: :makeup, repo: "hexpm", optional: false]}], "hexpm", "174d0809e98a4ef0b3309256cbf97101c6ec01c4ab0b23e926a9e17df2077cbb"},
   "nimble_parsec": {:hex, :nimble_parsec, "1.2.3", "244836e6e3f1200c7f30cb56733fd808744eca61fd182f731eac4af635cc6d0b", [:mix], [], "hexpm", "c8d789e39b9131acf7b99291e93dae60ab48ef14a7ee9d58c6964f59efb570b0"},
   "nx": {:hex, :nx, "0.3.0", "12448769619ed1442e22bd198faf4629ae3d0ee3ed565e42be49829cc42bf35f", [:mix], [{:complex, "~> 0.4.2", [hex: :complex, repo: "hexpm", optional: false]}], "hexpm", "d08d8962f4379ade54281aad84c45cb7eb0118b406fc836f07b94acc40df5859"},
-  "openblas_builder": {:git, "https://github.com/zeam-vm/openblas_builder.git", "2d13d3cb7476d965ec417d57ca25daa5eb86549f", [branch: "main"]},
+  "openblas_builder": {:git, "https://github.com/zeam-vm/openblas_builder.git", "aedb9b64751fc9b09bf288156bb821a5cfb1f7dd", [branch: "main"]},
 }
