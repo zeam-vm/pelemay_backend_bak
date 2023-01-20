@@ -17,6 +17,11 @@ defmodule PelemayBackend.Backend do
   import Nx.Shared
 
   @impl true
+  def init(opts) do
+    Keyword.validate!(opts, [])
+  end
+
+  @impl true
   def constant(%{type: type, shape: shape} = out, constant, _backend_options) do
     data = :binary.copy(number_to_binary(constant, type), Nx.size(shape))
     from_binary(out, data)
