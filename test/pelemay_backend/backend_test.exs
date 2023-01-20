@@ -223,7 +223,8 @@ defmodule PelemayBackend.BackendTest do
     window_scatter_max: 5,
     window_scatter_min: 5,
     # window_sum: 3
-    weighted_mean: 3
+    weighted_mean: 3,
+    median: 2
   ]
 
   doctest Nx,
